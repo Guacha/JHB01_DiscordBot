@@ -1,3 +1,2 @@
-dotenv
 dotenv-python
 discord
