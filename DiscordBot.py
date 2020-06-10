@@ -36,6 +36,34 @@ async def cuenta_pajas(context):
 
     lista = obtener_pajas(server)  # obtiene un diccionario de la forma {(UUID): (UU Pajas)}
 
+    if usr in lista:
+        print('-----------------------------------------------------------')
+        print('Comando de pajas')
+        print("Usuario existente: {}".format(context.author.id))  # Debugging
+        print("Pajas de usuario: {}".format(lista[usr]+1))
+        print('-----------------------------------------------------------')
+
+        # Incrementamos las pajas en 1 y amendamos el archivo de pajas
+        lista[usr] = lista[usr] + 1
+        escribir_pajas(server, lista)
+
+        # Le hacemos saber al usuario cuantas pajas lleva
+        await context.channel.send('Llevas {} pajas, {}!'.format(lista[usr], context.author.mention))
+
+    else:
+        # Si el usuario no aparece en la lista, nunca ha usado el comando, debemos crear la entrada en la lista
+        print('-----------------------------------------------------------')
+        print('Comando de pajas')
+        print("Usuario Nuevo: {}".format(context.author.id))  # Debugging
+        print('-----------------------------------------------------------')
+
+        # Incrementamos las pajas en 1 y amendamos el archivo de pajas
+        lista[usr] = 1
+        escribir_pajas(server, lista)
+
+        # Le hacemos saber al usuario cuantas pajas lleva
+        await context.channel.send('Llevas {} pajas, {}!'.format(lista[usr], context.author.mention))
+
 
 # Comando para pedir el tamaño del nepe
 @client.command(name='pene',
@@ -56,7 +84,11 @@ async def penecito(context):
     if usr in lista:  # Buscamos si el usuario ya tiene un tamaño de pene registrado
         # Si ya ha usado el comando antes, debemos buscar el nombre en la lista
 
-        print("Usuario existente, ID: {}, Tamaño: {}".format(usr, lista[usr]))  # Debugging
+        print('-----------------------------------------------------------')
+        print('Comando de pene')
+        print("Usuario existente: {}".format(context.author.id))  # Debugging
+        print("Tamaño de usuario: {}".format(lista[usr]))
+        print('-----------------------------------------------------------')
 
         # Enviamos el mensaje resultado
         await context.channel.send(
@@ -65,7 +97,10 @@ async def penecito(context):
     else:
         # Si el usuario no aparece en la lista, nunca ha usado el comando, debemos crear la entrada en la lista
 
+        print('-----------------------------------------------------------')
+        print('Comando de penes')
         print("Usuario Nuevo: {}".format(context.author.id))  # Debugging
+        print('-----------------------------------------------------------')
 
         # Creamos un tamaño de pene aleatorio entre 3 y 48 cm
         sze = random.randrange(3, 48)
@@ -81,11 +116,11 @@ async def penecito(context):
 @client.event
 async def on_ready():
     """Función de Debugging para el bot, nos confirma que no se explotó esta mondá"""
-    print('-----------------------')  # Debugging
+    print('-----------------------------------------------------------')  # Debugging
     print('Bot conectado satisfactoriamente!')  # Debugging
     print(client.user.name)  # Debugging
     print(client.user.id)  # Debugging
-    print('-----------------------')  # debugging
+    print('-----------------------------------------------------------')  # debugging
 
 
 def escribir_sizes(nom_server, usr, tam):
@@ -172,14 +207,18 @@ def obtener_pajas(nom_server):
         return {}  # Retornamos un diccionario vacío
 
 
-def escribir_pajas(nom_server, usr, tam):
-    """Función que añade una entrada al archivo que es usado como base de datos para las pajas"""
+def escribir_pajas(nom_server, pajas):
+    """Función que genera el archivo que es usado como base de datos para las pajas"""
+    """ADVERTENCIA!: Actualmente esto está programado de forma super ineficiente porque
+    reescribe el archivo caada vez que se requiera una nueva paja, hasta que se mejore
+    esta advertencia seguirá activa"""
 
     # Bloque Try-Catch para asegurarnos que el directorio y el archivo existan
     try:
         bsd = '.\\cantidad_pajas\\{}.cdp'.format(nom_server)  # Nombre de arch
-        f = open(bsd, 'a+')  # Preparar para añadir al archivo
-        f.write('{},{}\n'.format(usr, tam))  # Escribir al archivo
+        f = open(bsd, 'w')  # Preparar para añadir al archivo
+        for key in pajas:
+            f.write('{},{}\n'.format(key, pajas[key]))  # Escribir al archivo
 
         # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
         f.close()
@@ -189,8 +228,9 @@ def escribir_pajas(nom_server, usr, tam):
         os.makedirs('.\\cantidad_pajas')
 
         bsd = '.\\cantidad_pajas\\{}.cdp'.format(nom_server)  # Nombre de arch
-        f = open(bsd, 'w+')  # Preparar para añadir al archivo
-        f.write('{},{}\n'.format(usr, tam))  # Escribir al archivo
+        f = open(bsd, 'w')  # Preparar para añadir al archivo
+        for key in pajas:
+            f.write('{},{}\n'.format(key, pajas[key]))  # Escribir al archivo
 
         # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
         f.close()
