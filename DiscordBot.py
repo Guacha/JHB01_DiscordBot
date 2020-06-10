@@ -1,8 +1,10 @@
-import discord
-import random
-from discord.ext.commands import Bot
 import os
+import random
 
+from discord.ext.commands import Bot
+from dotenv.main import load_dotenv
+
+load_dotenv()
 PREFIX = '/'  # Prefijo para los comandos del bot
 
 client = Bot(command_prefix=PREFIX)  # Crear cliente de bot con el prefijo dado
@@ -237,18 +239,21 @@ def escribir_pajas(nom_server, pajas):
 
 
 def get_token(particiones):
-    """Funcion para descifrar el token a partir de N archivos (numero de particiones)"""
-    print('Preparando el descifrado del token con {} archivos...'.format(particiones))
+    """Funcion para descifrar el token a partir de N variables de conf (numero de particiones)"""
+
+    """Esta sección está modificada para usar las config vars de Heroku, el servicio en el que el bot está
+    Hosteado, si se desea correr localmente, debes generar tu archivo de environment"""
+
+    print('Preparando el descifrado del token con {} variables...'.format(particiones))
     token = ""  # El token empieza en blanco
     for i in range(particiones):  # Iteramos para el número de particiones
-        filename = '.\\TOKEN_{}.TK'.format(i)  # Obtenemos el nombre del archivo que se debe Descifrar
-        part = open(filename, 'r')  # Abrir el archivo correspondiente
-        fraccion = part.read()  # Leer el texto del archivo i
-        print('Archivo {}: {}'.format(i, fraccion))  # Debugging
-        token = token + fraccion  # Leer el texto del archivo y adicionarlo al token completo
-        part.close()
+        var = 'TOKEN_{}'.format(i)  # Obtenemos el nombre del archivo que se debe Descifrar
+        part = os.environ.get(var, "nepe")  # Obtener la configuración de las config Vars de Heroku
+        print('Variable {}: {}'.format(i, part))  # Debugging
+        token = token + part  # Leer el texto del archivo y adicionarlo al token completo
 
     print('Token descifrado: {}'.format(token))
+    print('-----------------------------------------------------------')
     return token
 
 
