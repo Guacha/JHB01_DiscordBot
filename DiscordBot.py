@@ -16,8 +16,25 @@ client = Bot(command_prefix=PREFIX)  # Crear cliente de bot con el prefijo dado
                 pass_context=True)
 async def tierlist(context):
     """Función que obtiene la lista de tamaños de penes, la organiza, y la envía"""
-    server = context.guild.id
-    lista = obtener_sizes(server)
+    # todo everything!
+    # Placeholder
+    await context.channel.send('Tu maldita madre, esto todavía no funciona careverga, '
+                               'métete tu comando por el asterisco')
+
+
+@client.command(name='paja',
+                description='Comando que mantiene una base de datos de la cantidad de pajas que se hace el servidor',
+                brief='El bot te cuenta las pajas!',
+                aliases=['pajas', 'PAJAS', 'PAJA'],
+                pass_context=True)
+async def cuenta_pajas(context):
+    usr = str(context.author.id)  # El ID único del usuario que usa el comando
+    # Debe ser el ID porque el Username puede cambiar (Y lo hace frecuentemente)
+
+    server = context.guild.id  # El ID único del servidor en el que se ejecuta el comando
+    # Debe ser el ID porque el Guildname puede cambiar (Y lo hace frecuentemente)
+
+    lista = obtener_pajas(server)  # obtiene un diccionario de la forma {(UUID): (UU Pajas)}
 
 
 # Comando para pedir el tamaño del nepe
@@ -73,16 +90,31 @@ async def on_ready():
 
 def escribir_sizes(nom_server, usr, tam):
     """Función que añade una entrada a un archivo que es usado como base de datos"""
-    bsd = '.\\tamaños_de_pene\\{}.bdp'.format(nom_server)  # Nombre de arch
-    f = open(bsd, 'a+')  # Preparar para añadir al archivo
-    f.write('{},{}\n'.format(usr, tam))  # Escribir al archivo
 
-    # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
-    f.close()
+    # Bloque Try-Catch para asegurarnos que el directorio y el archivo existan
+    try:
+        bsd = '.\\tamaños_de_pene\\{}.bdp'.format(nom_server)  # Nombre de arch
+        f = open(bsd, 'a+')  # Preparar para añadir al archivo
+        f.write('{},{}\n'.format(usr, tam))  # Escribir al archivo
+
+        # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
+        f.close()
+
+    # Si el directorio o el archivo no existen, se crean
+    except FileNotFoundError:
+        os.makedirs('.\\tamaños_de_pene')
+
+        bsd = '.\\tamaños_de_pene\\{}.bdp'.format(nom_server)  # Nombre de arch
+        f = open(bsd, 'w+')  # Preparar para añadir al archivo
+        f.write('{},{}\n'.format(usr, tam))  # Escribir al archivo
+
+        # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
+        f.close()
 
 
 def obtener_sizes(nom_server):
-    """Función que lee un archivo que se usa como base de datos y se genera un diccionario a partir de el"""
+    """Función que lee un archivo que se usa como base de datos de los tamaños y se
+    genera un diccionario a partir de el"""
 
     # El código debe estar dentro de un bloque Try-Catch, para asegurarnos de que el archivo exista en el directorio
     try:
@@ -108,6 +140,60 @@ def obtener_sizes(nom_server):
     # En caso de que el archivo no exista, quiere decir que nadie nunca ha usado el comando, luego, la lista está vacia
     except FileNotFoundError:
         return {}  # Retornamos un diccionario vacío
+
+
+def obtener_pajas(nom_server):
+    """Función que lee un archivo que se usa como base de datos de la cantidad de pajas y se
+    genera un diccionario a partir de el"""
+
+    # El código debe estar dentro de un bloque Try-Catch, para asegurarnos de que el archivo exista en el directorio
+    try:
+        """Cabe aclarar, que los archivos tienen un nombre que es igual al GUID del Guild en el que está el bot
+        Esto es porque cada Guild tiene una lista de usuarios distinta, esto permite al bot estar en varios 
+        Guilds distintos y tener distintas bases de Datos con la lista de usuarios de cada Guild en particular"""
+
+        # Si existe, abrimos el archivo correspondiente
+        bsd = open('.\\cantidad_pajas\\{}.cdp'.format(nom_server), 'r+')
+
+        # Iniciamos con un diccionario vacío
+        list_usrs = {}
+
+        # Cada linea del archivo base de datos tiene el formato (UUID,Tamaño), luego cada linea es una entrada
+        for linea in bsd:
+            spl = linea.split(',')  # Obtenemos el texto de la linea y lo dividimos en una lista de dos posiciones
+            list_usrs[spl[0]] = int(spl[1][0:-1])  # se añade esa entrada al diccionario, obviando el caracter \n
+
+        # Para evitar errores, cerramos el archivo
+        bsd.close()
+        return list_usrs
+
+    # En caso de que el archivo no exista, quiere decir que nadie nunca ha usado el comando, luego, la lista está vacia
+    except FileNotFoundError:
+        return {}  # Retornamos un diccionario vacío
+
+
+def escribir_pajas(nom_server, usr, tam):
+    """Función que añade una entrada al archivo que es usado como base de datos para las pajas"""
+
+    # Bloque Try-Catch para asegurarnos que el directorio y el archivo existan
+    try:
+        bsd = '.\\cantidad_pajas\\{}.cdp'.format(nom_server)  # Nombre de arch
+        f = open(bsd, 'a+')  # Preparar para añadir al archivo
+        f.write('{},{}\n'.format(usr, tam))  # Escribir al archivo
+
+        # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
+        f.close()
+
+    # Si el directorio o el archivo no existen, se crean
+    except FileNotFoundError:
+        os.makedirs('.\\cantidad_pajas')
+
+        bsd = '.\\cantidad_pajas\\{}.cdp'.format(nom_server)  # Nombre de arch
+        f = open(bsd, 'w+')  # Preparar para añadir al archivo
+        f.write('{},{}\n'.format(usr, tam))  # Escribir al archivo
+
+        # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
+        f.close()
 
 
 def get_token(particiones):
