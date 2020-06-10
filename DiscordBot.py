@@ -25,7 +25,7 @@ async def tierlist(context):
 @client.command(name='paja',
                 description='Comando que mantiene una base de datos de la cantidad de pajas que se hace el servidor',
                 brief='El bot te cuenta las pajas!',
-                aliases=['pajas', 'PAJAS', 'PAJA'],
+                aliases=['pajas', 'PAJAS', 'PAJA', 'pajazo', 'PAJAZO'],
                 pass_context=True)
 async def cuenta_pajas(context):
     usr = str(context.author.id)  # El ID único del usuario que usa el comando
