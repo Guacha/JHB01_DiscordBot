@@ -2,7 +2,7 @@ import os
 import random
 
 from discord.ext.commands import Bot
-from dotenv import load_dotenv
+from dotenv.main import load_dotenv
 
 load_dotenv()
 PREFIX = '/'  # Prefijo para los comandos del bot
