@@ -2,9 +2,10 @@ import os
 import random
 
 from discord.ext.commands import Bot
-from dotenv.main import load_dotenv
+from dotenv import load_dotenv
 
 load_dotenv()
+
 PREFIX = '/'  # Prefijo para los comandos del bot
 
 client = Bot(command_prefix=PREFIX)  # Crear cliente de bot con el prefijo dado
