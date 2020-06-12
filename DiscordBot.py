@@ -2,6 +2,7 @@ import os
 import random
 import discord
 import shutil
+from FireHandler import Database
 
 from Scraper import ChampionData
 from discord.ext.commands import Bot
@@ -14,20 +15,10 @@ PREFIX = '/'  # Prefijo para los comandos del bot
 
 client = Bot(command_prefix=PREFIX)  # Crear cliente de bot con el prefijo dado
 
-mins_reinicio = 10080
-
+database = Database()
 
 def eliminar_penes():
-    folder = '.\\tamaños_de_pene\\'
-    for filename in os.listdir(folder):
-        file_path = os.path.join(folder, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e))
+    pass
 
 
 @tasks.loop(minutes=1)
@@ -35,10 +26,9 @@ async def upd_cont_reset():
     """Esta función actualiza el contador de penes cada minuto que pasa, y realiza ciertos eventos cuando el tiempo
     pasa ciertos límites, esto es supremamente ineficiente y debe mejorar, pero está programado a las 3:35 am y ahora
     no tengo ni el tiempo ni la energía para terminar esto"""
-    global mins_reinicio
-    mins_reinicio -= 1
+    mins = database.get_reset_timer(393917904506191872)  # Actualmente la ID es única, pero esto debe cambiar
 
-    if mins_reinicio == 1440:  # 1440/60 == 24
+    if mins == 1440:  # 1440/60 == 24
         # Iteramos entre todos los canales que tenga disponible el bot
         for channel in client.get_all_channels():
 
@@ -49,7 +39,7 @@ async def upd_cont_reset():
                 if channel.name == 'general':
                     await channel.send("Queda 1 día para el reinicio de los penes!")
 
-    elif mins_reinicio == 720:  # 720/60 == 12
+    elif mins == 720:  # 720/60 == 12
         # Iteramos entre todos los canales que tenga disponible el bot
         for channel in client.get_all_channels():
 
@@ -60,7 +50,7 @@ async def upd_cont_reset():
                 if channel.name == 'general':
                     await channel.send("Quedan 12 horas para el reinicio de los penes, @everyone")
 
-    elif mins_reinicio == 360:  # 360/60 == 6
+    elif mins == 360:  # 360/60 == 6
         # Iteramos entre todos los canales que tenga disponible el bot
         for channel in client.get_all_channels():
 
@@ -71,7 +61,7 @@ async def upd_cont_reset():
                 if channel.name == 'general':
                     await channel.send("Quedan 6 horas para el reinicio de los penes!")
 
-    elif mins_reinicio == 180:  # 180/60 == 3
+    elif mins == 180:  # 180/60 == 3
         # Iteramos entre todos los canales que tenga disponible el bot
         for channel in client.get_all_channels():
 
@@ -82,7 +72,7 @@ async def upd_cont_reset():
                 if channel.name == 'general':
                     await channel.send("Quedan 3 horas para el reinicio de los penes!")
 
-    elif mins_reinicio == 60:  # 60/60 == 1
+    elif mins == 60:  # 60/60 == 1
         # Iteramos entre todos los canales que tenga disponible el bot
         for channel in client.get_all_channels():
 
@@ -93,7 +83,7 @@ async def upd_cont_reset():
                 if channel.name == 'general':
                     await channel.send("Queda 1 hora para el reinicio de los penes!")
 
-    elif mins_reinicio == 10:
+    elif mins == 10:
         # Iteramos entre todos los canales que tenga disponible el bot
         for channel in client.get_all_channels():
 
@@ -104,7 +94,7 @@ async def upd_cont_reset():
                 if channel.name == 'general':
                     await channel.send("Quedan 10 minutos para el reinicio de los penes, @everyone!")
 
-    elif mins_reinicio == 0:  # Pasó una semana y se deben reiniciar los penes!
+    elif mins == 0:  # Pasó una semana y se deben reiniciar los penes!
 
         # Iteramos entre todos los canales que tenga disponible el bot
         for channel in client.get_all_channels():
@@ -114,12 +104,11 @@ async def upd_cont_reset():
 
                 # Si lo es, revisamos si tiene el nombre requerido
                 if channel.name == 'general':
-                    eliminar_penes()
+                    eliminar_penes(393917904506191872)
                     print('-----------------------------------------------------------')
                     print('Se borraron los penes')  # Debugging
                     print('-----------------------------------------------------------')
                     await channel.send("Los penes han sido eliminados @everyone")
-                    mins_reinicio = 10080
 
 
 @client.command(name='reset',
@@ -128,7 +117,7 @@ async def upd_cont_reset():
                 aliases=['Reset', 'RESET'],
                 pass_context=True)
 async def get_reset(context):
-    global mins_reinicio
+    mins_reinicio = database.get_reset_timer(context.guild.id)
     print('-----------------------------------------------------------')
     print('Comando de builds')  # Debugging
     print(f'Tiempo restatnte (mins): {mins_reinicio}')
@@ -198,7 +187,7 @@ async def get_builds(context, champ):
 async def tierlist(context):
     """Función que obtiene la lista de tamaños de penes, la organiza, y la envía"""
     server = context.guild
-    lista = obtener_sizes(server.id)
+    lista = obtener_lista_penes(server.id)
     print('-----------------------------------------------------------')
     print('Comando de tierlist de penes')  # Debugging
 
@@ -236,7 +225,7 @@ async def tierlist(context):
 async def tierlist(context):
     """Función que obtiene la lista de cantidad de pajas, la organiza, y la envía"""
     server = context.guild
-    lista = obtener_pajas(server.id)
+    lista = obtener_lista_pajas(server.id)
     print('-----------------------------------------------------------')
     print('Comando de tierlist de pajas')  # Debugging
 
@@ -276,7 +265,7 @@ async def get_pajas(context):
     total = 0  # El número mínimo posible es 0
 
     # Usando el método para obtener diccionario de pajas
-    lista = obtener_pajas(context.guild.id)
+    lista = obtener_lista_pajas(context.guild.id)
 
     # Iteramos por las llaves del diccionario
     for persona in lista:
@@ -297,21 +286,20 @@ async def cuenta_pajas(context):
     server = context.guild.id  # El ID único del servidor en el que se ejecuta el comando
     # Debe ser el ID porque el Guildname puede cambiar (Y lo hace frecuentemente)
 
-    lista = obtener_pajas(server)  # obtiene un diccionario de la forma {(UUID): (UU Pajas)}
+    pajas = obtener_pajas(server, usr)  # obtiene un diccionario de la forma {(UUID): (UU Pajas)}
 
-    if usr in lista:
+    if pajas:
         print('-----------------------------------------------------------')
         print('Comando de pajas')
-        print(f"Usuario existente: {context.author.id}")  # Debugging
-        print(f"Pajas de usuario: {lista[usr] + 1}")
+        print(f"Usuario existente: {usr}")  # Debugging
+        print(f"Pajas de usuario: {pajas + 1}")
         print('-----------------------------------------------------------')
 
         # Incrementamos las pajas en 1 y amendamos el archivo de pajas
-        lista[usr] = lista[usr] + 1
-        escribir_pajas(server, lista)
+        agregar_paja(server, usr)
 
         # Le hacemos saber al usuario cuantas pajas lleva
-        await context.channel.send('Llevas {} pajas, {}!'.format(lista[usr], context.author.mention))
+        await context.channel.send('Llevas {} pajas, {}!'.format(pajas + 1, context.author.mention))
 
     else:
         # Si el usuario no aparece en la lista, nunca ha usado el comando, debemos crear la entrada en la lista
@@ -321,11 +309,10 @@ async def cuenta_pajas(context):
         print('-----------------------------------------------------------')
 
         # Incrementamos las pajas en 1 y amendamos el archivo de pajas
-        lista[usr] = 1
-        escribir_pajas(server, lista)
+        agregar_paja(server, usr)
 
         # Le hacemos saber al usuario cuantas pajas lleva
-        await context.channel.send('Llevas {} pajas, {}!'.format(lista[usr], context.author.mention))
+        await context.channel.send(f'Llevas {1} paja, {context.author.mention}!')
 
 
 # Comando para pedir el tamaño del nepe
@@ -342,20 +329,20 @@ async def penecito(context):
     server = context.guild.id  # El ID único del servidor en el que se ejecuta el comando
     # Debe ser el ID porque el Guildname puede cambiar (Y lo hace frecuentemente)
 
-    lista = obtener_sizes(server)  # obtiene un diccionario de la forma {(UUID): (UU Size)}
+    tam = obtener_size(server, usr)  # obtiene un diccionario de la forma {(UUID): (UU Size)}
 
-    if usr in lista:  # Buscamos si el usuario ya tiene un tamaño de pene registrado
+    if tam:  # Buscamos si el usuario ya tiene un tamaño de pene registrado
         # Si ya ha usado el comando antes, debemos buscar el nombre en la lista
 
         print('-----------------------------------------------------------')
         print('Comando de pene')
         print("Usuario existente: {}".format(context.author.id))  # Debugging
-        print("Tamaño de usuario: {}".format(lista[usr]))
+        print("Tamaño de usuario: {}".format(tam))
         print('-----------------------------------------------------------')
 
         # Enviamos el mensaje resultado
         await context.channel.send(
-            'Según recuerdo, tu pene mide {} centímetros, {}'.format(lista[usr], context.author.mention))
+            f'Según recuerdo, tu pene mide {tam} centímetros, {context.author.mention}')
 
     else:
         # Si el usuario no aparece en la lista, nunca ha usado el comando, debemos crear la entrada en la lista
@@ -369,7 +356,7 @@ async def penecito(context):
         sze = random.randrange(3, 48)
 
         # Usamos la función para escribir a la lista el UUID y el tamaño obtenido
-        escribir_sizes(server, context.author.id, sze)
+        escribir_size(server, context.author.id, sze)
 
         # Enviamos el mensaje
         await context.channel.send(
@@ -386,117 +373,35 @@ async def on_ready():
     print('-----------------------------------------------------------')  # debugging
 
 
-def escribir_sizes(nom_server, usr, tam):
-    """Función que añade una entrada a un archivo que es usado como base de datos"""
+def escribir_size(server, usr, tam):
+    """Función que añade una entrada a una base da datos de los tamaños de penes de los usuarios"""
 
-    # Bloque Try-Catch para asegurarnos que el directorio y el archivo existan
-    try:
-        bsd = '.\\tamaños_de_pene\\{}.bdp'.format(nom_server)  # Nombre de arch
-        f = open(bsd, 'a+')  # Preparar para añadir al archivo
-        f.write('{},{}\n'.format(usr, tam))  # Escribir al archivo
-
-        # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
-        f.close()
-
-    # Si el directorio o el archivo no existen, se crean
-    except FileNotFoundError:
-        os.makedirs('.\\tamaños_de_pene')
-
-        bsd = '.\\tamaños_de_pene\\{}.bdp'.format(nom_server)  # Nombre de arch
-        f = open(bsd, 'w+')  # Preparar para añadir al archivo
-        f.write('{},{}\n'.format(usr, tam))  # Escribir al archivo
-
-        # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
-        f.close()
+    database.set_pene(server, usr, tam)
 
 
-def obtener_sizes(nom_server):
+def obtener_size(nom_server, uuid):
     """Función que lee un archivo que se usa como base de datos de los tamaños y se
     genera un diccionario a partir de el"""
 
-    # El código debe estar dentro de un bloque Try-Catch, para asegurarnos de que el archivo exista en el directorio
-    try:
-        """Cabe aclarar, que los archivos tienen un nombre que es igual al GUID del Guild en el que está el bot
-        Esto es porque cada Guild tiene una lista de usuarios distinta, esto permite al bot estar en varios 
-        Guilds distintos y tener distintas bases de Datos con la lista de usuarios de cada Guild en particular"""
-
-        # Si existe, abrimos el archivo correspondiente
-        bsd = open('.\\tamaños_de_pene\\{}.bdp'.format(nom_server), 'r+')
-
-        # Iniciamos con un diccionario vacío
-        list_usrs = {}
-
-        # Cada linea del archivo base de datos tiene el formato (UUID,Tamaño), luego cada linea es una entrada
-        for linea in bsd:
-            spl = linea.split(',')  # Obtenemos el texto de la linea y lo dividimos en una lista de dos posiciones
-            list_usrs[spl[0]] = int(spl[1][0:-1])  # se añade esa entrada al diccionario, obviando el caracter \n
-
-        # Para evitar errores, cerramos el archivo
-        bsd.close()
-        return list_usrs
-
-    # En caso de que el archivo no exista, quiere decir que nadie nunca ha usado el comando, luego, la lista está vacia
-    except FileNotFoundError:
-        return {}  # Retornamos un diccionario vacío
+    return database.get_pene(nom_server, uuid)
 
 
-def obtener_pajas(nom_server):
-    """Función que lee un archivo que se usa como base de datos de la cantidad de pajas y se
-    genera un diccionario a partir de el"""
+def obtener_pajas(nom_server, uuid):
+    """Funcion que retorna el resultado btenido de la base de datos de pajas"""
 
-    # El código debe estar dentro de un bloque Try-Catch, para asegurarnos de que el archivo exista en el directorio
-    try:
-        """Cabe aclarar, que los archivos tienen un nombre que es igual al GUID del Guild en el que está el bot
-        Esto es porque cada Guild tiene una lista de usuarios distinta, esto permite al bot estar en varios 
-        Guilds distintos y tener distintas bases de Datos con la lista de usuarios de cada Guild en particular"""
-
-        # Si existe, abrimos el archivo correspondiente
-        bsd = open('.\\cantidad_pajas\\{}.cdp'.format(nom_server), 'r+')
-
-        # Iniciamos con un diccionario vacío
-        list_usrs = {}
-
-        # Cada linea del archivo base de datos tiene el formato (UUID,Tamaño), luego cada linea es una entrada
-        for linea in bsd:
-            spl = linea.split(',')  # Obtenemos el texto de la linea y lo dividimos en una lista de dos posiciones
-            list_usrs[spl[0]] = int(spl[1][0:-1])  # se añade esa entrada al diccionario, obviando el caracter \n
-
-        # Para evitar errores, cerramos el archivo
-        bsd.close()
-        return list_usrs
-
-    # En caso de que el archivo no exista, quiere decir que nadie nunca ha usado el comando, luego, la lista está vacia
-    except FileNotFoundError:
-        return {}  # Retornamos un diccionario vacío
+    return database.get_pajas(nom_server, uuid)
 
 
-def escribir_pajas(nom_server, pajas):
+def obtener_lista_pajas(nom_server):
+    return database.get_all_pajas(nom_server)
+
+def obtener_lista_penes(nom_server):
+    return database.get_all_penes(nom_server)
+
+def agregar_paja(nom_server, uuid):
     """Función que genera el archivo que es usado como base de datos para las pajas"""
-    """ADVERTENCIA!: Actualmente esto está programado de forma super ineficiente porque
-    reescribe el archivo caada vez que se requiera una nueva paja, hasta que se mejore
-    esta advertencia seguirá activa"""
 
-    # Bloque Try-Catch para asegurarnos que el directorio y el archivo existan
-    try:
-        bsd = '.\\cantidad_pajas\\{}.cdp'.format(nom_server)  # Nombre de arch
-        f = open(bsd, 'w')  # Preparar para añadir al archivo
-        for key in pajas:
-            f.write('{},{}\n'.format(key, pajas[key]))  # Escribir al archivo
-
-        # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
-        f.close()
-
-    # Si el directorio o el archivo no existen, se crean
-    except FileNotFoundError:
-        os.makedirs('.\\cantidad_pajas')
-
-        bsd = '.\\cantidad_pajas\\{}.cdp'.format(nom_server)  # Nombre de arch
-        f = open(bsd, 'w')  # Preparar para añadir al archivo
-        for key in pajas:
-            f.write('{},{}\n'.format(key, pajas[key]))  # Escribir al archivo
-
-        # Para evitar errores, Cerramos esa verga para no editarlo mientras está abierto
-        f.close()
+    database.add_paja(nom_server, uuid)
 
 
 def get_token(particiones):
