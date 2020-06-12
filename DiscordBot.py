@@ -1,9 +1,11 @@
 import os
 import random
 import discord
+import shutil
 
 from Scraper import ChampionData
 from discord.ext.commands import Bot
+from discord.ext import tasks
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,6 +13,113 @@ load_dotenv()
 PREFIX = '/'  # Prefijo para los comandos del bot
 
 client = Bot(command_prefix=PREFIX)  # Crear cliente de bot con el prefijo dado
+
+mins_reinicio = 10080
+
+
+def eliminar_penes():
+    folder = '.\\tamaños_de_pene\\'
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+
+@tasks.loop(minutes=1)
+async def upd_cont_penes():
+    """Esta función actualiza el contador de penes cada minuto que pasa, y realiza ciertos eventos cuando el tiempo
+    pasa ciertos límites, esto es supremamente ineficiente y debe mejorar, pero está programado a las 3:35 am y ahora
+    no tengo ni el tiempo ni la energía para terminar esto"""
+    global mins_reinicio
+    mins_reinicio -= 1
+
+    if mins_reinicio == 1440:  # 1440/60 == 24
+        # Iteramos entre todos los canales que tenga disponible el bot
+        for channel in client.get_all_channels():
+
+            # Revisamos si cada canal es un canal de texto
+            if isinstance(channel, discord.TextChannel):
+
+                # Si lo es, revisamos si tiene el nombre requerido
+                if channel.name == 'general':
+                    await channel.send("Queda 1 día para el reinicio de los penes!")
+
+    elif mins_reinicio == 720:  # 720/60 == 12
+        # Iteramos entre todos los canales que tenga disponible el bot
+        for channel in client.get_all_channels():
+
+            # Revisamos si cada canal es un canal de texto
+            if isinstance(channel, discord.TextChannel):
+
+                # Si lo es, revisamos si tiene el nombre requerido
+                if channel.name == 'general':
+                    await channel.send("Quedan 12 horas para el reinicio de los penes, @everyone")
+
+    elif mins_reinicio == 360:  # 360/60 == 6
+        # Iteramos entre todos los canales que tenga disponible el bot
+        for channel in client.get_all_channels():
+
+            # Revisamos si cada canal es un canal de texto
+            if isinstance(channel, discord.TextChannel):
+
+                # Si lo es, revisamos si tiene el nombre requerido
+                if channel.name == 'general':
+                    await channel.send("Quedan 6 horas para el reinicio de los penes!")
+
+    elif mins_reinicio == 180:  # 180/60 == 3
+        # Iteramos entre todos los canales que tenga disponible el bot
+        for channel in client.get_all_channels():
+
+            # Revisamos si cada canal es un canal de texto
+            if isinstance(channel, discord.TextChannel):
+
+                # Si lo es, revisamos si tiene el nombre requerido
+                if channel.name == 'general':
+                    await channel.send("Quedan 3 horas para el reinicio de los penes!")
+
+    elif mins_reinicio == 60:  # 60/60 == 1
+        # Iteramos entre todos los canales que tenga disponible el bot
+        for channel in client.get_all_channels():
+
+            # Revisamos si cada canal es un canal de texto
+            if isinstance(channel, discord.TextChannel):
+
+                # Si lo es, revisamos si tiene el nombre requerido
+                if channel.name == 'general':
+                    await channel.send("Queda 1 hora para el reinicio de los penes!")
+
+    elif mins_reinicio == 10:
+        # Iteramos entre todos los canales que tenga disponible el bot
+        for channel in client.get_all_channels():
+
+            # Revisamos si cada canal es un canal de texto
+            if isinstance(channel, discord.TextChannel):
+
+                # Si lo es, revisamos si tiene el nombre requerido
+                if channel.name == 'general':
+                    await channel.send("Quedan 10 minutos para el reinicio de los penes, @everyone!")
+
+    elif mins_reinicio == 0:  # Pasó una semana y se deben reiniciar los penes!
+
+        # Iteramos entre todos los canales que tenga disponible el bot
+        for channel in client.get_all_channels():
+
+            # Revisamos si cada canal es un canal de texto
+            if isinstance(channel, discord.TextChannel):
+
+                # Si lo es, revisamos si tiene el nombre requerido
+                if channel.name == 'general':
+                    eliminar_penes()
+                    print('-----------------------------------------------------------')
+                    print('Se borraron los penes')  # Debugging
+                    print('-----------------------------------------------------------')
+                    await channel.send("Los penes han sido eliminados @everyone")
+                    mins_reinicio = 10080
 
 
 @client.command(name='build',
@@ -57,7 +166,8 @@ async def get_builds(context, champ):
                 markup.add_field(name=noms[build], value=itemlist_markup, inline=False)
 
         await context.channel.send(content=None, embed=markup)
-
+        print("Información enviada exitosamente")
+        print('-----------------------------------------------------------')
     # Si no se consiguieron los datos, hay que avisar que el man es imbécil y escribió algo mal
     else:
         await context.channel.send("Buena imbécil, escribiste mal el nombre del campeón, aprende a escribir")
@@ -75,6 +185,8 @@ async def tierlist(context):
     """Función que obtiene la lista de tamaños de penes, la organiza, y la envía"""
     server = context.guild
     lista = obtener_sizes(server.id)
+    print('-----------------------------------------------------------')
+    print('Comando de tierlist')  # Debugging
 
     # Ordenamos el diccionario por valor, de forma descendente
     lista_ordenada = sorted(lista.items(), key=lambda x: x[1], reverse=True)
@@ -82,16 +194,22 @@ async def tierlist(context):
     # Obtener diccionario que relacione nombres de usuario con su UUID
     rels = {}
     for user in server.members:
-        if user.id in lista_ordenada:
-            rels[user.id] = user.mention
+        if str(user.id) in lista:
+            rels[str(user.id)] = user.mention
 
     # Mensaje enbebido
     markup = discord.Embed(title="Tierlist de penes!")
 
+    # Iniciamos un contador externo para llevar las posiciones
     cont = 1
-    for user in lista_ordenada:
-        markup.add_field(name=f'{cont}°, con {lista_ordenada[user.id]} cm', value=str(rels[user.id]), inline=False)
 
+    #
+    for entry in lista_ordenada:
+        print(f'Posición: {cont}, Usuario: {entry[0]}, Tamaño: {entry[1]}')
+        markup.add_field(name=f'{cont}°, con {entry[1]} cm', value=rels[entry[0]], inline=False)
+        cont += 1
+
+    print('-----------------------------------------------------------')  # Debugging
     await context.channel.send(content=None, embed=markup)
 
 
@@ -259,7 +377,7 @@ def obtener_sizes(nom_server):
         # Cada linea del archivo base de datos tiene el formato (UUID,Tamaño), luego cada linea es una entrada
         for linea in bsd:
             spl = linea.split(',')  # Obtenemos el texto de la linea y lo dividimos en una lista de dos posiciones
-            list_usrs[spl[0]] = spl[1][0:-1]  # se añade esa entrada al diccionario, obviando el caracter \n
+            list_usrs[spl[0]] = int(spl[1][0:-1])  # se añade esa entrada al diccionario, obviando el caracter \n
 
         # Para evitar errores, cerramos el archivo
         bsd.close()
@@ -349,5 +467,5 @@ def get_token(particiones):
 
 
 TOKEN = get_token(3)
-
+upd_cont_penes.start()
 client.run(TOKEN)
