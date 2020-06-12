@@ -1,1 +1,1 @@
-release: python DiscordBot.py
+botrun: python DiscordBot.py

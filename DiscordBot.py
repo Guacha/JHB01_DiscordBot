@@ -73,10 +73,26 @@ async def get_builds(context, champ):
                 pass_context=True)
 async def tierlist(context):
     """Función que obtiene la lista de tamaños de penes, la organiza, y la envía"""
-    # todo everything!
-    # Placeholder
-    await context.channel.send('Tu maldita madre, esto todavía no funciona careverga, '
-                               'métete tu comando por el asterisco')
+    server = context.guild
+    lista = obtener_sizes(server.id)
+
+    # Ordenamos el diccionario por valor, de forma descendente
+    lista_ordenada = sorted(lista.items(), key=lambda x: x[1], reverse=True)
+
+    # Obtener diccionario que relacione nombres de usuario con su UUID
+    rels = {}
+    for user in server.members:
+        if user.id in lista_ordenada:
+            rels[user.id] = user.mention
+
+    # Mensaje enbebido
+    markup = discord.Embed(title="Tierlist de penes!")
+
+    cont = 1
+    for user in lista_ordenada:
+        markup.add_field(name=f'{cont}°, con {lista_ordenada[user.id]} cm', value=str(rels[user.id]), inline=False)
+
+    await context.channel.send(content=None, embed=markup)
 
 
 # Comando cuentapajas para contar el total de pajas del servidor
