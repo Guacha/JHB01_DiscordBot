@@ -1,1 +1,1 @@
-release: python DiscordBot.py
+worker: python DiscordBot.py
