@@ -1,6 +1,8 @@
 import os
 import random
+import discord
 
+from Scraper import ChampionData
 from discord.ext.commands import Bot
 from dotenv import load_dotenv
 
@@ -9,6 +11,58 @@ load_dotenv()
 PREFIX = '/'  # Prefijo para los comandos del bot
 
 client = Bot(command_prefix=PREFIX)  # Crear cliente de bot con el prefijo dado
+
+
+@client.command(name='build',
+                description='Comando que te deja saber la build de algún campeón de LoL',
+                brief='Obtén la build de un campeón!',
+                aliases=['Build', 'builds', 'BUILD', 'Builds', 'BUILDS'],
+                pass_context=True)
+async def get_builds(context, champ):
+    """Con esta funcion se obtienen las builds del scraper, y se entregan al usuario"""
+
+    print('-----------------------------------------------------------')
+    print('Comando de builds')  # Debugging
+    print(f'Campeón seleccionado: {champ}')
+
+    # Tenemos un diccionario para relacionar cada build a un título y una cadena bien formada
+    noms = {
+        1: f'Build completa más común de {champ}',
+        2: f'Build completa con mayor winrate de {champ}',
+        3: f'Iniciales más comunes de {champ}',
+        4: f'Iniciales con mayor winrate de {champ}'
+    }
+
+    # Creamos el objeto que contiene los datos del champ que se requiera
+    champion_data = ChampionData(champ.lower())
+
+    # De este objeto, obtenemos la info de las builds
+    build_data = champion_data.builds
+    if build_data:  # Verificamos que hayamos conseguido los datos
+        markup = discord.Embed(title=f"Items indicados para {champ}", description="Obtenido de Champion.gg")
+
+        for build in build_data:
+            itemlist = build_data[build]
+            if itemlist:
+                itemlist_markup = ' -> '.join(itemlist)
+            else:
+                itemlist_markup = 'No hay una build aún para este campeón, intentalo más tarde :('
+
+            # Odio discord.py
+            # Los items inline se mostrarán en la misma linea, deben estar juntos
+            if build > 2:  # Si vamos por los items iniciales, deben ir inline para que sea más entendible
+                markup.add_field(name=noms[build], value=itemlist_markup, inline=True)
+
+            else:  # Los primeros dos campos no van inline, tienen demasiada info
+                markup.add_field(name=noms[build], value=itemlist_markup, inline=False)
+
+        await context.channel.send(content=None, embed=markup)
+
+    # Si no se consiguieron los datos, hay que avisar que el man es imbécil y escribió algo mal
+    else:
+        await context.channel.send("Buena imbécil, escribiste mal el nombre del campeón, aprende a escribir")
+        print("Campeón no existe")
+        print('-----------------------------------------------------------')
 
 
 # Comando Tierlist para dar la lista de tamaños de penes todo: Hacer la lista y organizarla lindo
@@ -23,6 +77,26 @@ async def tierlist(context):
     # Placeholder
     await context.channel.send('Tu maldita madre, esto todavía no funciona careverga, '
                                'métete tu comando por el asterisco')
+
+
+# Comando cuentapajas para contar el total de pajas del servidor
+@client.command(name='cuentapajas',
+                description='Comando que mantiene una base de datos de la cantidad de pajas que se hace el servidor',
+                brief='El bot te cuenta las pajas!',
+                aliases=['CUENTAPAJAS', 'Cuentapajas'],
+                pass_context=True)
+async def get_pajas(context):
+    """Método que recorre toda la lista de pajas y suma las pajas de todos los que hayan usado el comando"""
+    total = 0  # El número mínimo posible es 0
+
+    # Usando el método para obtener diccionario de pajas
+    lista = obtener_pajas(context.guild.id)
+
+    # Iteramos por las llaves del diccionario
+    for persona in lista:
+        total += int(lista[persona])  # Por cada persona, tomamos sus pajas y las sumamos al total
+
+    await context.channel.send(f'El servidor en conjunto lleva un gran total de {total} pajas')
 
 
 @client.command(name='paja',
@@ -42,8 +116,8 @@ async def cuenta_pajas(context):
     if usr in lista:
         print('-----------------------------------------------------------')
         print('Comando de pajas')
-        print("Usuario existente: {}".format(context.author.id))  # Debugging
-        print("Pajas de usuario: {}".format(lista[usr]+1))
+        print(f"Usuario existente: {context.author.id}")  # Debugging
+        print(f"Pajas de usuario: {lista[usr] + 1}")
         print('-----------------------------------------------------------')
 
         # Incrementamos las pajas en 1 y amendamos el archivo de pajas
