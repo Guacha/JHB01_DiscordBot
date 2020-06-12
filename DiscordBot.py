@@ -31,7 +31,7 @@ def eliminar_penes():
 
 
 @tasks.loop(minutes=1)
-async def upd_cont_penes():
+async def upd_cont_reset():
     """Esta función actualiza el contador de penes cada minuto que pasa, y realiza ciertos eventos cuando el tiempo
     pasa ciertos límites, esto es supremamente ineficiente y debe mejorar, pero está programado a las 3:35 am y ahora
     no tengo ni el tiempo ni la energía para terminar esto"""
@@ -122,6 +122,20 @@ async def upd_cont_penes():
                     mins_reinicio = 10080
 
 
+@client.command(name='reset',
+                description='Comando para saber cuanto falta para el reinicio de los penes',
+                brief='Obtén el tiempo que falta para reset de la tierlist',
+                aliases=['Reset', 'RESET'],
+                pass_context=True)
+async def get_reset(context):
+    global mins_reinicio
+    print('-----------------------------------------------------------')
+    print('Comando de builds')  # Debugging
+    print(f'Tiempo restatnte (mins): {mins_reinicio}')
+    print('-----------------------------------------------------------')
+    await context.channel.send(f"Aún quedan {mins_reinicio // 60} horas , {mins_reinicio % 60} minutos para reiniciar")
+
+
 @client.command(name='build',
                 description='Comando que te deja saber la build de algún campeón de LoL',
                 brief='Obtén la build de un campeón!',
@@ -175,18 +189,18 @@ async def get_builds(context, champ):
         print('-----------------------------------------------------------')
 
 
-# Comando Tierlist para dar la lista de tamaños de penes todo: Hacer la lista y organizarla lindo
-@client.command(name='tierlist',
+# Comando Tierlist para dar la lista de tamaños de penes
+@client.command(name='listapene',
                 description='Comando que mantiene una base de datos de tu tamaño del pene',
                 brief='El bot te otorga un tamaño de pene!',
-                aliases=['list', 'tier', 'TIERLIST', 'listapene'],
+                aliases=['penetierlist', 'penetl'],
                 pass_context=True)
 async def tierlist(context):
     """Función que obtiene la lista de tamaños de penes, la organiza, y la envía"""
     server = context.guild
     lista = obtener_sizes(server.id)
     print('-----------------------------------------------------------')
-    print('Comando de tierlist')  # Debugging
+    print('Comando de tierlist de penes')  # Debugging
 
     # Ordenamos el diccionario por valor, de forma descendente
     lista_ordenada = sorted(lista.items(), key=lambda x: x[1], reverse=True)
@@ -207,6 +221,44 @@ async def tierlist(context):
     for entry in lista_ordenada:
         print(f'Posición: {cont}, Usuario: {entry[0]}, Tamaño: {entry[1]}')
         markup.add_field(name=f'{cont}°, con {entry[1]} cm', value=rels[entry[0]], inline=False)
+        cont += 1
+
+    print('-----------------------------------------------------------')  # Debugging
+    await context.channel.send(content=None, embed=markup)
+
+
+# Comando Tierlist para dar la lista de tamaños de penes
+@client.command(name='listapajas',
+                description='Comando que mantiene una base de datos de tu tamaño del pene',
+                brief='El bot te otorga un tamaño de pene!',
+                aliases=['pajatierlist', 'pajatl'],
+                pass_context=True)
+async def tierlist(context):
+    """Función que obtiene la lista de cantidad de pajas, la organiza, y la envía"""
+    server = context.guild
+    lista = obtener_pajas(server.id)
+    print('-----------------------------------------------------------')
+    print('Comando de tierlist de pajas')  # Debugging
+
+    # Ordenamos el diccionario por valor, de forma descendente
+    lista_ordenada = sorted(lista.items(), key=lambda x: x[1], reverse=True)  # Retorna lista de tuplas ordenadas
+
+    # Obtener diccionario que relacione nombres de usuario con su UUID
+    rels = {}
+    for user in server.members:
+        if str(user.id) in lista:
+            rels[str(user.id)] = user.mention
+
+    # Mensaje enbebido
+    markup = discord.Embed(title="Tierlist de pajas!")
+
+    # Iniciamos un contador externo para llevar las posiciones
+    cont = 1
+
+    # Añadir los campos al mensaje embebido
+    for entry in lista_ordenada:
+        print(f'Posición: {cont}, Usuario: {entry[0]}, Pajas: {entry[1]}')
+        markup.add_field(name=f'{cont}°, con {entry[1]} pajas', value=rels[entry[0]], inline=False)
         cont += 1
 
     print('-----------------------------------------------------------')  # Debugging
@@ -467,5 +519,5 @@ def get_token(particiones):
 
 
 TOKEN = get_token(3)
-upd_cont_penes.start()
+upd_cont_reset.start()
 client.run(TOKEN)
