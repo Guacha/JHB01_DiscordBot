@@ -60,20 +60,24 @@ class Database:
         self.__db.child(guid).child('server-stats').update({'reset-timer': cont_act.val() - 1})
 
     def get_reset_timer(self, guid):
+        """Obtiene el estado actual del contador"""
         cont_act = self.__db.child(guid).child('server-stats').child('reset-timer').get()
 
         if cont_act.val():
             return cont_act.val()
-        else:
+        else: # En caso de que el contador aún no se haya creado en la base de datos
             self.__db.child(guid).child('server-stats').update({'reset-timer': 10079})
             return 10079
 
     def reset_all(self, guid):
+        # Reiniciamos el timer
         self.__db.child(guid).child('server-stats').update({'reset-timer': 10080})
 
+        # Obtenemos todos los usuarios en una lista
         guild_users = self.__db.child(guid).child('user-stats').get()
 
         for user in guild_users.each():
+            # Para cada usuario ponemos sus pajas en 0 y borramos su tamaño
             self.__db.child(guid).child('user-stats').child(user.key()).update({'pajas': 0})
             self.__db.child(guid).child('user-stats').child(user.key()).child('tamaño').remove()
 
@@ -105,7 +109,8 @@ class Database:
         # Diccionario que contendrá los UUID y el tamaño del pene
         res = {}
         for user in guild_users.each():
-            res[user.key()] = user.val()['tamaño']
+            if 'tamaño' in user.val():
+                res[user.key()] = user.val()['tamaño']
 
         return res
 
