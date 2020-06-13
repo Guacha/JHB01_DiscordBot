@@ -105,7 +105,7 @@ async def upd_cont_reset():
 
                 # Si lo es, revisamos si tiene el nombre requerido
                 if channel.name == 'general':
-                    eliminar_penes(393917904506191872)
+                    eliminar_penes()
                     print('-----------------------------------------------------------')
                     print('Se borraron los penes')  # Debugging
                     print('-----------------------------------------------------------')
@@ -123,7 +123,7 @@ async def get_reset(context):
     print('Comando de builds')  # Debugging
     print(f'Tiempo restatnte (mins): {mins_reinicio}')
     print('-----------------------------------------------------------')
-    await context.channel.send(f"Aún quedan {mins_reinicio // 60} horas , {mins_reinicio % 60} minutos para reiniciar")
+    await context.channel.send(f"Aún quedan {mins_reinicio // 60} horas, {mins_reinicio % 60} minutos para reiniciar")
 
 
 @client.command(name='build',
