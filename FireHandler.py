@@ -99,7 +99,8 @@ class Database:
         # Diccionario que contendrá los UUID y la cantidad de pajas
         res = {}
         for user in guild_users.each():
-            res[user.key()] = user.val()['pajas']
+            if 'pajas' in user.val():
+                res[user.key()] = user.val()['pajas']
 
         return res
 

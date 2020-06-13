@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
+import re
 
 
 class ChampionData:
@@ -36,6 +37,19 @@ class ChampionData:
 
         return builds
 
+    def arr_runes(self):
+        raw_data = self.structure.find_all('div', class_=re.compile("RuneBuilder__PathColumn"))
+
+        runes = {
+            1: None,
+            2: None
+        }
+        for dataset in raw_data:
+            runetree = []
+            for column in dataset:
+                # runes = column.find_all('div', class_=re.compile("Description__Title"))
+                print(column)
+
     def __init__(self, champion):
         self.builds = None
         self.runes = None
@@ -50,3 +64,7 @@ class ChampionData:
             print("Ese champiñón no existe")
         else:
             self.builds = self.arr_builds()
+
+champion = ChampionData('leblanc')
+
+champion.arr_runes()
