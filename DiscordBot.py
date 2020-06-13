@@ -26,6 +26,7 @@ async def upd_cont_reset():
     """Esta función actualiza el contador de penes cada minuto que pasa, y realiza ciertos eventos cuando el tiempo
     pasa ciertos límites, esto es supremamente ineficiente y debe mejorar, pero está programado a las 3:35 am y ahora
     no tengo ni el tiempo ni la energía para terminar esto"""
+    database.reset_countdown()
     mins = database.get_reset_timer(393917904506191872)  # Actualmente la ID es única, pero esto debe cambiar
 
     if mins == 1440:  # 1440/60 == 24
