@@ -108,6 +108,3 @@ class Database:
             res[user.key()] = user.val()['tamaño']
 
         return res
-
-
-nepe = Database()

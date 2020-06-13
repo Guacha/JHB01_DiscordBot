@@ -2,3 +2,4 @@ beautifulsoup4
 requests
 discord
 python-dotenv
+pyrebase4
