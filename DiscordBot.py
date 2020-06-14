@@ -17,6 +17,7 @@ client = Bot(command_prefix=PREFIX)  # Crear cliente de bot con el prefijo dado
 
 database = Database()
 
+
 def eliminar_penes():
     database.reset_all(393917904506191872)
 
@@ -126,6 +127,52 @@ async def get_reset(context):
     await context.channel.send(f"Aún quedan {mins_reinicio // 60} horas, {mins_reinicio % 60} minutos para reiniciar")
 
 
+@client.command(name='runas',
+                description='Comando que te deja saber las runas de algún campeón de LoL',
+                brief='Obtén las runas de un campeón!',
+                aliases=['Runas', 'runes', 'Runes', 'RUNAS', 'RUNES'],
+                pass_context=True)
+async def get_builds(context, champ):
+    print('-----------------------------------------------------------')
+    print('Comando de builds')  # Debugging
+    print(f'Campeón seleccionado: {champ}')
+
+    # Diccionario para hacer cadenas lindas
+    noms = {
+        1: f'Runas más comunes de {champ}',
+        2: f'Runas con mayor winrate de {champ}'
+    }
+
+    # Creamos el objeto campeón para buscar la info
+    champion = ChampionData(champ.lower())
+
+    # Usamos la funcion de ChampionData para obtener las runas y procesarlas
+    runes = champion.runes
+    champion.get_champ_icon()
+    # Verificamos si consiguió los datos
+    if runes:
+        markup = discord.Embed(title=f"Runas indicadas para {champ}", description="Obtenido de Champion.gg")
+        for runeset in runes:
+            if runeset == 1:
+                markup.add_field(name=noms[1], value="----------------------------", inline=False)
+            else:
+                markup.add_field(name=noms[2], value=" ---------------------------", inline=False)
+            tree = runes[runeset]
+            path_title = ""
+            for path in tree:
+                path_title = path[0]
+                selecciones = '\n'.join(path[1])
+                markup.add_field(name=path_title, value=selecciones, inline=True)
+
+        await context.channel.send(content=None, embed=markup)
+        print("Información enviada exitosamente")
+        print('-----------------------------------------------------------')
+    else:
+        await context.channel.send("Buena imbécil, escribiste mal el nombre del campeón, aprende a escribir")
+        print("Campeón no existe")
+        print('-----------------------------------------------------------')
+
+
 @client.command(name='build',
                 description='Comando que te deja saber la build de algún campeón de LoL',
                 brief='Obtén la build de un campeón!',
@@ -153,11 +200,12 @@ async def get_builds(context, champ):
     build_data = champion_data.builds
     if build_data:  # Verificamos que hayamos conseguido los datos
         markup = discord.Embed(title=f"Items indicados para {champ}", description="Obtenido de Champion.gg")
+        markup.set_thumbnail(url=champion_data.get_champ_icon())
 
         for build in build_data:
             itemlist = build_data[build]
             if itemlist:
-                itemlist_markup = ' -> '.join(itemlist)
+                itemlist_markup = '\n'.join(itemlist)
             else:
                 itemlist_markup = 'No hay una build aún para este campeón, intentalo más tarde :('
 
@@ -168,7 +216,7 @@ async def get_builds(context, champ):
 
             else:  # Los primeros dos campos no van inline, tienen demasiada info
                 markup.add_field(name=noms[build], value=itemlist_markup, inline=False)
-
+        markup.set_footer(text=champion_data.get_patch())
         await context.channel.send(content=None, embed=markup)
         print("Información enviada exitosamente")
         print('-----------------------------------------------------------')
@@ -396,8 +444,10 @@ def obtener_pajas(nom_server, uuid):
 def obtener_lista_pajas(nom_server):
     return database.get_all_pajas(nom_server)
 
+
 def obtener_lista_penes(nom_server):
     return database.get_all_penes(nom_server)
+
 
 def agregar_paja(nom_server, uuid):
     """Función que genera el archivo que es usado como base de datos para las pajas"""
