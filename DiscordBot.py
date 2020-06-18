@@ -655,10 +655,20 @@ async def na_error(ctx, error):
 async def paja_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
         if ctx.message.author.id == 261303165150953472:  # Si es Miguel
-            await ctx.channel.send('Si te vas a poner con tu perro spam, puedes comer mierda, y te va a tocar esperar')
+            client.get_command('paja').reset_cooldown(ctx)
+            await ctx.channel.send(content='Si te vas a poner con tu perro spam, puedes comer mierda, '
+                                           'y te va a tocar esperar',
+                                   embed=discord.Embed(title='Tiempo para siguiente paja',
+                                                       description=f'{str(error.retry_after)} segundos'
+                                                       )
+                                   )
         else:
-            await ctx.channel.send('Malparido ansiado de mierda, aguanta un poquito, se te va a caer la verga hijo de '
-                                   'tu mil puta madre')
+            await ctx.channel.send(content='Malparido ansiado de mierda, aguanta un poquito, se te va a caer la verga '
+                                           'hijo de tu mil puta madre',
+                                   embed=discord.Embed(title='Tiempo para siguiente paja',
+                                                       description=f'{str(error.retry_after)} segundos'
+                                                       )
+                                   )
 
 
 # Eventos
