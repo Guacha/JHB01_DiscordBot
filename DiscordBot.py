@@ -1,6 +1,7 @@
 import os
 import random
 import discord
+import math
 from FireHandler import Database
 
 from Scraper import WinrateData, ChampionData, TournamentData
@@ -116,22 +117,30 @@ async def upd_cont_reset():
                 description='Comando para obtener información de la liga profesional de Europa (LEC)',
                 brief='Busca un jugador/equipo europeo',
                 aliases=['Lec', 'lec', 'EU', 'eu', 'Eu'],
-                usage='/LEC {jugador|equipo} {(Nombre de jugador/equipo)}',
+                usage='/LEC {jugador|equipo|partidos} {(Nombre de jugador/equipo) (opcional)}',
                 pass_context=True)
-async def eu(context, searchtype, *, query):
+async def eu(context, searchtype, *args):
     """Función que organiza la información de un jugador de la liga europea"""
     print('---------------------------------------------------------------------')
     print('Comando de EU')  # Debugging
 
     # Verificamos si el argumento no es nulo
     if searchtype:
+        """Creamos listas con opciones para los tipos de búsquedas (No entiendo por qué mierda, pero en Python
+        aparentemente es más eficiente iterar por listas en vez de hacer comparaciones directas (????), no sé si
+        lo que leí es correcto, seguramente no, pero de esta forma es más fácil añadir keywords así que así se queda"""
+        # todo: investigate if method is efficient
+        # Julián del futuro, da lo mismo, pero el comentario se queda, me da pereza reescribirlo
+        opt_player = ['player', 'jugador', 'jug', 'ply']
+        opt_team = ['team', 'equipo', 'tm', 'eq']
+        opt_schedule = ['schedule', 'partidos', 'cronograma', 'matchups', 'sch', 'part', 'matches', 'mat']
 
         # Verificamos si la persona quiere mirar un jugador específico
-        if searchtype.lower() == 'player' or searchtype.lower() == 'jugador':
+        if searchtype.lower() in opt_player:
 
             # Chiste contra rekkles, si el usuario escribe 'pecho frío' se reemplaza por rekkles
             # Si no, se reemplazan los espacios por underscores
-            formatted = 'rekkles' if query == 'pecho frio' else query.replace(' ', '_')
+            formatted = 'rekkles' if '_'.join(args) == 'pecho frio' else '_'.join(args)
             player = TournamentData(league='LEC', query=formatted)
             stats = player.get_player_stats()
 
@@ -145,11 +154,38 @@ async def eu(context, searchtype, *, query):
                 markup = get_player_embed(stats, pic)
                 await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
             else:
+                print('Jugador solicitado: Inválido')
                 await context.channel.send("Ese jugador no existe en la base de datos, revisa la ortografía o "
                                            "asegurate de que lo buscaste en la liga correcta")
-        elif searchtype.lower() == 'equipo' or searchtype.lower() == 'team':
+        elif searchtype.lower() in opt_team:
             print('Busqueda por equipos')  # Debugging
             await context.channel.send('Lo siento, aún no puedo buscar equipos :c')
+        elif searchtype.lower() in opt_schedule:
+            print('Solicitud de partidos')
+            tournament = TournamentData('LEC', None)
+            week = tournament.get_current_week()
+            matches = tournament.get_schedule()
+            markup = discord.Embed(title='Próximos partidos de la LEC', description='Verano 2020')
+            markup.set_footer(text=f'Semana de partidos: Semana {week}')
+
+            cont = 1
+            dias = {
+                1: 'Viernes',
+                2: 'Sábado',
+                3: 'Domingo'
+            }
+            markup.add_field(name=f"Día {math.ceil(cont/5)} ({(dias[math.ceil(cont/5)])})",
+                             value='---------------------------------------------'
+                             )
+            for match in matches:
+                markup.add_field(name=f'Partida {cont}:', value=f'{match[0]} Vs. {match[1]}', inline=False)
+                if cont % 5 == 0 and cont != len(matches):
+                    markup.add_field(name=f"Día {math.ceil(cont / 5) + 1} ({(dias[math.ceil(cont / 5) + 1])})",
+                                     value='---------------------------------------------'
+                                     )
+
+                cont += 1
+            await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
 
         else:
             print('Referencia inválida')  # Debugging
@@ -162,25 +198,34 @@ async def eu(context, searchtype, *, query):
                 description='Comando para obtener información de la liga profesional de NA (LCS)',
                 brief='Busca un jugador/equipo Norteamericano',
                 aliases=['Lcs', 'lcs', 'NA', 'na', 'Na'],
-                usage='/LCS {jugador|equipo} {(Nombre de jugador/equipo)}',
+                usage='/LCS {jugador|equipo|partidos} {(Nombre de jugador/equipo)(opcional)}',
                 pass_context=True)
-async def na(context, searchtype, *, query):
-    """Función que organiza la información de un jugador de la liga europea"""
+async def na(context, searchtype, *args):
+    """Función que organiza la información de un jugador de la liga Americana"""
     print('---------------------------------------------------------------------')
     print('Comando de NA')  # Debugging
 
     # Verificamos si el argumento no es nulo
     if searchtype:
+        """Creamos listas con opciones para los tipos de búsquedas (No entiendo por qué mierda, pero en Python
+        aparentemente es más eficiente iterar por listas en vez de hacer comparaciones directas (????), no sé si
+        lo que leí es correcto, seguramente no, pero de esta forma es más fácil añadir keywords así que así se queda"""
+        # todo: investigate if method is efficient
+        # Julián del futuro, da lo mismo, pero el comentario se queda, me da pereza reescribirlo
+        opt_player = ['player', 'jugador', 'jug', 'ply']
+        opt_team = ['team', 'equipo', 'tm', 'eq']
+        opt_schedule = ['schedule', 'partidos', 'cronograma', 'matchups', 'sch', 'part', 'matches', 'mat']
 
         # Verificamos si la persona quiere mirar un jugador específico
-        if searchtype.lower() == 'player' or searchtype.lower() == 'jugador':
+        if searchtype.lower() in opt_player:
 
-            # Se reemplazan los espacios por underscores
-            formatted = query.replace(' ', '_')
+            # Chiste contra rekkles, si el usuario escribe 'pecho frío' se reemplaza por rekkles
+            # Si no, se reemplazan los espacios por underscores
+            formatted = 'rekkles' if '_'.join(args) == 'pecho frio' else '_'.join(args)
             player = TournamentData(league='LCS', query=formatted)
             stats = player.get_player_stats()
 
-            # Si stats == None, no se encontró el jugador
+            # Si stats es None, no se encontró el jugador buscado
             if stats:
                 pic = player.get_picture()
 
@@ -189,18 +234,43 @@ async def na(context, searchtype, *, query):
                 # Obtenemos un markup hypertextual y lo enviamos
                 markup = get_player_embed(stats, pic)
                 await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
-
             else:
+                print('Jugador solicitado: Inválido')
                 await context.channel.send("Ese jugador no existe en la base de datos, revisa la ortografía o "
                                            "asegurate de que lo buscaste en la liga correcta")
-
-        elif searchtype.lower() == 'equipo' or searchtype.lower() == 'team':
+        elif searchtype.lower() in opt_team:
             print('Busqueda por equipos')  # Debugging
             await context.channel.send('Lo siento, aún no puedo buscar equipos :c')
+        elif searchtype.lower() in opt_schedule:
+            print('Solicitud de partidos')
+            tournament = TournamentData('LCS', None)
+            week = tournament.get_current_week()
+            matches = tournament.get_schedule()
+            markup = discord.Embed(title='Próximos partidos de la LCS', description='Verano 2020')
+            markup.set_footer(text=f'Semana de partidos: Semana {week}')
+
+            cont = 3
+            dias = {
+                1: 'Viernes',
+                2: 'Sábado',
+                3: 'Domingo'
+            }
+            markup.add_field(name=f"Día {1} ({(dias[1])})",
+                             value='---------------------------------------------'
+                             )
+            for match in matches:
+                markup.add_field(name=f'Partida {cont-2}:', value=f'{match[0]} Vs. {match[1]}', inline=False)
+                if cont % 4 == 0 and cont-2 != len(matches):
+                    markup.add_field(name=f"Día {math.ceil(cont / 4) + 1} ({(dias[math.ceil(cont / 4) + 1])})",
+                                     value='---------------------------------------------'
+                                     )
+
+                cont += 1
+            await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
 
         else:
             print('Referencia inválida')  # Debugging
-            await help(context, 'LEC')
+            await help(context, 'LCS')
 
     print('---------------------------------------------------------------------')
 
@@ -642,13 +712,20 @@ async def eu_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.channel.send("Careverga, esa vaina no se usa así")
         await help(ctx, 'LEC')
+    else:
+        print('Error interno del bot: ', error)
+        print('---------------------------------------------------------------------')
 
 
 @na.error
 async def na_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.channel.send("Careverga, esa vaina no se usa así")
-        await help(ctx, 'LEC')
+        await help(ctx, 'LCS')
+    else:
+        print('Error interno del bot:', error)
+        print('---------------------------------------------------------------------')
+
 
 
 @add_paja.error
