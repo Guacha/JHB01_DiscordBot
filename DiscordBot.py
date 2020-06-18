@@ -550,7 +550,7 @@ async def get_pajas(context):
                 aliases=['pajas', 'PAJAS', 'PAJA', 'pajazo', 'PAJAZO'],
                 usage='/paja',
                 pass_context=True)
-async def cuenta_pajas(context):
+async def add_paja(context):
     usr = str(context.author.id)  # El ID único del usuario que usa el comando
     # Debe ser el ID porque el Username puede cambiar (Y lo hace frecuentemente)
 
@@ -638,17 +638,27 @@ async def penecito(context):
 
 # Manejo de errores
 @eu.error
-async def on_command_error(ctx, error):
+async def eu_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.channel.send("Careverga, esa vaina no se usa así")
         await help(ctx, 'LEC')
 
 
 @na.error
-async def on_command_error(ctx, error):
+async def na_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.channel.send("Careverga, esa vaina no se usa así")
         await help(ctx, 'LEC')
+
+
+@add_paja.error
+async def paja_error(ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+        if ctx.message.author.id == 261303165150953472:  # Si es Miguel
+            await ctx.channel.send('Si te vas a poner con tu perro spam, puedes comer mierda, y te va a tocar esperar')
+        else:
+            await ctx.channel.send('Malparido ansiado de mierda, aguanta un poquito, se te va a caer la verga hijo de '
+                                   'tu mil puta madre')
 
 
 # Eventos
