@@ -3,6 +3,107 @@ import requests
 import re
 
 
+class TournamentData:
+    """Esta clase contendrá los queries de torneo que se necesiten de jugadores o posiciones"""
+    YEAR = ""
+    SPLIT = ""
+    LEAGUE = ""
+
+    def get_picture(self):
+        url = f'https://lol.gamepedia.com/{self.query}'
+        html = requests.get(url=url)
+        soup = BeautifulSoup(html.content, 'html.parser')
+        pic_container = soup.find('div', class_='floatnone')
+        return pic_container.a.img['src']
+
+    def get_player_stats(self):
+        global YEAR, SPLIT, LEAGUE
+        url = f'https://lol.gamepedia.com/index.php?pfRunQueryFormName=TournamentStatistics&title=Special%3ARunQuery' \
+              f'%2FTournamentStatistics&TS%5Bpreload%5D=TournamentByPlayer&TS%5Btournament%5D={LEAGUE}%2F{YEAR}+' \
+              f'Season%2F{SPLIT}+Season&TS%5Blink%5D={self.query}&TS%5Bchampion%5D=&TS%5Brole%5D=&TS%5Bteam%5D=&TS' \
+              f'%5Bpatch%5D=&TS%5Byear%5D=&TS%5Bregion%5D=&TS%5Btournamentlevel%5D=&TS%5Bwhere%5D=&TS%5Bincludelink%5D' \
+              f'%5Bis_checkbox%5D=true&TS%5Bshownet%5D%5Bis_checkbox%5D=true&wpRunQuery=Run+query&pf_free_text='
+
+        html = requests.get(url=url)
+        soup = BeautifulSoup(html.content, 'html.parser')
+
+        table = soup.find('table')
+        if len(table.find_all('tr')) == 6:
+            # jugador encontrado
+            player_raw_info = table.find_all('tr')[-1].find_all('td')
+            player_stats = {
+                'team_name': player_raw_info[0].a['title'],
+                'team_logo': player_raw_info[0].a.img['src'],
+                'player_name': player_raw_info[1].get_text(),
+                'games_played': player_raw_info[2].get_text(),
+                'wins': player_raw_info[3].get_text(),
+                'losses': player_raw_info[4].get_text(),
+                'winratio': player_raw_info[5].get_text(),
+                'k/game': player_raw_info[6].get_text(),
+                'd/game': player_raw_info[7].get_text(),
+                'a/game': player_raw_info[8].get_text(),
+                'kda': player_raw_info[9].get_text(),
+                'cs/game': player_raw_info[10].get_text(),
+                'cs/min': player_raw_info[11].get_text(),
+                'gold/game': f'{player_raw_info[12].get_text()}K',
+                'gold/min': player_raw_info[13].get_text(),
+                'kill_part': player_raw_info[14].get_text(),
+                'kill_share': player_raw_info[15].get_text(),
+                'gold_share': player_raw_info[16].get_text(),
+                'champs_played': []
+            }
+            for champ in player_raw_info[18].find_all('a'):
+                player_stats['champs_played'].append(champ.span['title'])
+
+            return player_stats
+        else:
+            return None
+
+    def __init__(self, league, query):
+        global LEAGUE, YEAR, SPLIT
+        YEAR = '2020'  # Constante
+        SPLIT = 'Summer'  # Constante
+        LEAGUE = league
+        self.query = query
+
+
+class WinrateData:
+    """Esta clase contendrá los datos de los winrates de los campeones"""
+
+    def get_champ_icon(self):
+        img = self.structure.find('div', class_='champion-stats-header-info__image').find('img')['src'][2:-32]
+        return f"https://{img}"
+
+    def get_champ_stats(self):
+        patch = self.structure.find('div', class_="champion-stats-header-version")
+        if patch:
+            info = {'patch info': patch.get_text().strip()}
+            raw_data = self.structure.find('div', class_='champion-box-content')
+            champ_rates = raw_data.find_all('div', class_='champion-stats-trend-rate')
+            info['winrate'] = champ_rates[0].get_text().strip()
+            info['playrate'] = champ_rates[1].get_text().strip()
+            return info
+
+        else:
+            return None
+
+    def __init__(self, **kwargs):
+        # Diccionario para saber a qué linea nos referimos, si es el caso
+
+        if 'champ' in kwargs:
+            # Si entra aquí, debemos buscar por campeón
+            url = f"https://lan.op.gg/champion/{kwargs['champ']}/statistics/{kwargs['lane']}"
+            html = requests.get(url=url)
+            self.structure = BeautifulSoup(html.content, 'html.parser')
+        else:
+            # Si entra aquí, debemos buscar por línea
+            url = 'https://lan.op.gg/champion/statistics'
+            html = requests.get(url)
+            self.structure = BeautifulSoup(html.content, 'html.parser')
+            self.table = self.structure.find_all('div', class_='tabItems')
+            print(self.table[1])
+
+
 class ChampionData:
     """Esta clase contiene la información organizada del campeón que se le otorgó de la página champion.gg
     todo: runes, matchups, winrates"""
@@ -32,7 +133,7 @@ class ChampionData:
                     # Agregamos el item a la lista build
                     build.append(item['href'][38:])  # Quitamos el texto inutil del principio
 
-                builds[cont] = build # Ponemos la build en el espacio correspondiente del dict
+                builds[cont] = build  # Ponemos la build en el espacio correspondiente del dict
                 cont += 1
 
         return builds
@@ -62,7 +163,7 @@ class ChampionData:
             runepaths = dataset.find_all('section', id=re.compile("path"))
 
             for path in runepaths:
-                runes_in_path = [] # Esto guradará una tupla con las runas individuales de la rama
+                runes_in_path = []  # Esto guradará una tupla con las runas individuales de la rama
                 choices = path.find_all('div', class_=re.compile('Description__Block'))
 
                 # Para saber si vamos en el título del árbol o en las runas, usamos un contador
@@ -113,7 +214,6 @@ class ChampionData:
         self.patch = None
         self.url = f"https://champion.gg/champion/{champion}"
         html = requests.get(self.url)
-        print(html)
         self.structure = BeautifulSoup(html.content, 'html.parser')
         if len(self.structure.find_all('div', class_="large-header")) != 0:
             print("Ese champiñón no existe")
@@ -123,4 +223,6 @@ class ChampionData:
             self.champ_icon = self.get_champ_icon()
             self.champion = self.get_champ_name()
             self.patch = self.get_patch()
+
+
 
