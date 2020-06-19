@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import re
+import math
 
 
 class TournamentData:
@@ -8,6 +9,55 @@ class TournamentData:
     YEAR = ""
     SPLIT = ""
     LEAGUE = ""
+
+    def get_schedule(self):
+        """Obtiene los partidos de la semana pertinente"""
+
+        global YEAR, SPLIT, LEAGUE
+        # Formamos una URL con los valores de año, liga y split
+        url = f'https://lol.gamepedia.com/{LEAGUE}/{YEAR}_Season/{SPLIT}_Season'
+
+        # Buscamos la información de documento HTML en la página, y de ahí, lo que nos interesa
+        soup = BeautifulSoup(requests.get(url).content, 'html.parser')
+        table = soup.find_all('tr', class_=re.compile('mdv-allweeks mdv-week'))
+
+        # Lista que contendrá la información de la semana pertinente
+        week = []
+        for row in table:
+            # print(f"{row['class']}") debugging
+
+            # En la página, se muestran solamente los partidos de la semana activa, los demás se ocultan
+            if 'toggle-section-hidden' in row['class']:
+                continue
+            else:
+                if 'column-label-small' not in row['class']:  # Revisamos que no sea el header de la tabla
+                    week.append(row)
+
+        # Lista que contendrá las tuplas de equipos que tienen partido en la semana pertinente
+        matches = []
+        for row in week:
+            teams = row.find_all('span', class_='teamname')  # Sacamos los nombres de equipo
+
+            # For inline retorna lista tal que sus posiciones son dos equipos que se enfrentan, EJ: ['FNC', 'G2']
+            matches.append([team.get_text() for team in teams])
+
+        return matches
+
+    def get_current_week(self):
+        """Funciona casi igual que el método get_schedule, retorna el numero de la semana actual"""
+        global YEAR, SPLIT, LEAGUE
+        url = f'https://lol.gamepedia.com/{LEAGUE}/{YEAR}_Season/{SPLIT}_Season'
+        soup = BeautifulSoup(requests.get(url).content, 'html.parser')
+
+        # Buscamos entre todos los headers de tabla (Los headers contienen la semana)
+        table = soup.find_all('tr', class_=re.compile('column-label-small mdv-allweeks mdv-week'))
+
+        for week in table:
+
+            # Si la lista con las clases es < 4, quiere decir que no tiene el tag de "hidden"
+            if len(week['class']) < 4:
+                # retorna el último caracter del último elemento de la lista de "class"
+                return int(week['class'][-1][-1])
 
     def get_picture(self):
         url = f'https://lol.gamepedia.com/{self.query}'
@@ -58,6 +108,52 @@ class TournamentData:
             return player_stats
         else:
             return None
+
+    def get_players_by_position(self, position):
+        """Obtiene el jugador del equipo solicitado en la posición especificada"""
+
+        global YEAR, SPLIT, LEAGUE
+
+        # El procedimiento es el mismo que en la función get_player_stats
+        url = f'https://lol.gamepedia.com/index.php?pfRunQueryFormName=TournamentStatistics' \
+              f'&title=Special%3ARunQuery%2FTournamentStatistics&TS%5Bpreload%5D=ByPlayerRole' \
+              f'&TS%5Btournament%5D={LEAGUE}+{YEAR}+{SPLIT}&TS%5Blink%5D=&TS%5Bchampion%5D=' \
+              f'&TS%5Brole%5D={position}&TS%5Bteam%5D={self.query}&TS%5Bpatch%5D=' \
+              f'&TS%5Byear%5D=2020&TS%5Bregion%5D=&TS%5Btournamentlevel%5D=&TS%5Bwhere%5D=' \
+              f'&TS%5Bincludelink%5D%5Bis_checkbox%5D=true&TS%5Bshownet%5D%5Bis_checkbox%5D=true' \
+              f'&wpRunQuery=Run+query&pf_free_text='
+
+        html = requests.get(url=url)
+        soup = BeautifulSoup(html.content, 'html.parser')
+
+        table = soup.find('table')
+        if len(table.find_all('tr')) > 3:
+            # jugador(es) encontrado(s)
+            query_data = table.find_all('tr')
+            role = query_data[0].th.get_text()[6:query_data[0].th.get_text().find(';')]
+            total_games = query_data[1].th.get_text()[20:query_data[1].th.get_text().find('To') - 1]
+            all_players = query_data[3:]
+            player_list = []
+            for player in all_players:
+                data = player.find_all('td')
+                player_info = {
+                    'name': data[1].get_text(),
+                    'position': position,
+                    'games_played': f'{data[2].get_text()}/{total_games}'
+                }
+                player_list.append(player_info)
+
+            return player_list
+
+    def get_players_in_team(self):
+        """Retorna todos los jugadores de un equipo, incluidos suplentes"""
+
+        positions = ['Top', 'Jungle', 'Mid', 'ADC', 'Support']
+        roster = []
+        for position in positions:
+            roster.append(self.get_players_by_position(position))
+
+        return roster
 
     def __init__(self, league, query):
         global LEAGUE, YEAR, SPLIT
@@ -223,6 +319,3 @@ class ChampionData:
             self.champ_icon = self.get_champ_icon()
             self.champion = self.get_champ_name()
             self.patch = self.get_patch()
-
-
-

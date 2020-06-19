@@ -137,55 +137,122 @@ async def eu(context, searchtype, *args):
 
         # Verificamos si la persona quiere mirar un jugador específico
         if searchtype.lower() in opt_player:
+            async with context.typing():
+                # Chiste contra rekkles, si el usuario escribe 'pecho frío' se reemplaza por rekkles
+                # Si no, se reemplazan los espacios por underscores
+                formatted = 'rekkles' if '_'.join(args) == 'pecho frio' else '_'.join(args)
+                player = TournamentData(league='LEC', query=formatted)
+                stats = player.get_player_stats()
 
-            # Chiste contra rekkles, si el usuario escribe 'pecho frío' se reemplaza por rekkles
-            # Si no, se reemplazan los espacios por underscores
-            formatted = 'rekkles' if '_'.join(args) == 'pecho frio' else '_'.join(args)
-            player = TournamentData(league='LEC', query=formatted)
-            stats = player.get_player_stats()
+                # Si stats es None, no se encontró el jugador buscado
+                if stats:
+                    pic = player.get_picture()
 
-            # Si stats es None, no se encontró el jugador buscado
-            if stats:
-                pic = player.get_picture()
+                    print(f"Jugador solicitado: {stats['player_name']}")  # Debugging
 
-                print(f"Jugador solicitado: {stats['player_name']}")  # Debugging
-
-                # Obtenemos un markup hypertextual y lo enviamos
-                markup = get_player_embed(stats, pic)
-                await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
-            else:
-                print('Jugador solicitado: Inválido')
-                await context.channel.send("Ese jugador no existe en la base de datos, revisa la ortografía o "
-                                           "asegurate de que lo buscaste en la liga correcta")
+                    # Obtenemos un markup hypertextual y lo enviamos
+                    markup = get_player_embed(stats, pic)
+                    await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
+                else:
+                    print('Jugador solicitado: Inválido')
+                    await context.channel.send("Ese jugador no existe en la base de datos, revisa la ortografía o "
+                                               "asegurate de que lo buscaste en la liga correcta")
         elif searchtype.lower() in opt_team:
             print('Busqueda por equipos')  # Debugging
-            await context.channel.send('Lo siento, aún no puedo buscar equipos :c')
+            async with context.typing():
+                # Diccionario de equipos válidos y sus posibles apodos
+                valid_teams = {
+                    'G2_Esports': ['g2', 'g2 esports', ' g2esports'],
+                    'Fnatic': ['fnc', 'fnatic', 'equipo del pecho frio'],
+                    'Origen': ['og', 'origen'],
+                    'MAD_Lions': ['mad', 'mad lions', 'lions', 'madlions'],
+                    'Excel_Esports': ['xl', 'excel', 'excel esports', 'excelesports'],
+                    'FC_Schalke_04': ['s04', 'schalke', 'schalke 04', 'shalke', 'shalque', 'schalke04'],
+                    'Misfits_Gaming': ['msf', 'misfits', 'misfits gaming', 'misfitsgaming'],
+                    'Rogue': ['rge', 'rogue', 'steve aoki'],
+                    'SK_Gaming': ['sk', 'skg', 'sk gaming', 'skgaming'],
+                    'Team_Vitality': ['vit', 'vitality', 'team vitality', 'teamvitality']
+                }
+
+                # Buscamos el nombre del equipo en la lista de nombres y apodos
+                chosen_team = None
+                arg = ' '.join(args).lower()
+                for team in valid_teams:
+                    if arg in valid_teams[team]:
+                        chosen_team = team
+                        break # Si encuentra el equipo, no debemos buscar mas, rompemos el ciclo
+
+                # Si la variable no es None, quiere decir que encontramos un equipo válido
+                if chosen_team:
+                    print(f'Equipo elegido: {chosen_team}') # Debugging
+
+                    # Creamos el objeto buscador de información
+                    team_data = TournamentData('LEC', chosen_team)
+                    roster = team_data.get_players_in_team()
+
+                    # Markup hypertextual
+                    markup = discord.Embed(title=chosen_team.replace('_', ' '))
+                    markup.set_thumbnail(url=team_data.get_picture())
+
+                    # Diccionario para relacionar un número de iteración con una posición
+                    pos = {
+                        1: 'Top',
+                        2: 'Jungla',
+                        3: 'Mid',
+                        4: 'AD Carry',
+                        5: 'Soporte'
+                    }
+                    cont = 1
+                    for position in roster:
+                        # Añadimos un divisor que inicia la sección de posición
+                        markup.add_field(name=f'\nPosición: {pos[cont]}', value='-----------------------------',
+                                         inline=False)
+
+                        for player in position:
+                            # Agregamos el jugador de la posición (si hay suplentes, se añaden también)
+                            markup.add_field(
+                                name=player['name'],
+                                value=f"Partidos jugados con el equipo esta temporada: {player['games_played']}\n",
+                                inline=False
+                            )
+
+                        markup.add_field(name='\u200b', value='\u200b')
+                        cont += 1
+
+                    await context.channel.send('Aquí tienes la información que encontré', embed=markup)
+                else:
+                    await context.channel.send("Lo siento, el equipo que ingresaste no es válido, revisa que estés "
+                                               "buscando en la liga correcta, o revisa tu ortografía, es recomendable "
+                                               "que utilices la denominación de nomenclatura del equipo. "
+                                               "(Ej: 'FNC', 'G2')")
         elif searchtype.lower() in opt_schedule:
-            print('Solicitud de partidos')
-            tournament = TournamentData('LEC', None)
-            week = tournament.get_current_week()
-            matches = tournament.get_schedule()
-            markup = discord.Embed(title='Próximos partidos de la LEC', description='Verano 2020')
-            markup.set_footer(text=f'Semana de partidos: Semana {week}')
+            async with context.typing():
+                print('Solicitud de partidos')
+                tournament = TournamentData('LEC', None)
+                week = tournament.get_current_week()
+                matches = tournament.get_schedule()
+                markup = discord.Embed(title='Próximos partidos de la LEC', description='Verano 2020')
+                markup.set_footer(text=f'Semana de partidos: Semana {week}')
 
-            cont = 1
-            dias = {
-                1: 'Viernes',
-                2: 'Sábado',
-                3: 'Domingo'
-            }
-            markup.add_field(name=f"Día {math.ceil(cont/5)} ({(dias[math.ceil(cont/5)])})",
-                             value='---------------------------------------------'
-                             )
-            for match in matches:
-                markup.add_field(name=f'Partida {cont}:', value=f'{match[0]} Vs. {match[1]}', inline=False)
-                if cont % 5 == 0 and cont != len(matches):
-                    markup.add_field(name=f"Día {math.ceil(cont / 5) + 1} ({(dias[math.ceil(cont / 5) + 1])})",
-                                     value='---------------------------------------------'
-                                     )
+                cont = 1
+                dias = {
+                    1: 'Viernes',
+                    2: 'Sábado',
+                    3: 'Domingo'
+                }
+                markup.add_field(name=f"Día {math.ceil(cont / 5)} ({(dias[math.ceil(cont / 5)])})",
+                                 value='---------------------------------------------'
+                                 )
+                for match in matches:
+                    markup.add_field(name=f'Partida {cont}:', value=f'{match[0]} Vs. {match[1]}', inline=False)
+                    if cont % 5 == 0 and cont != len(matches):
+                        markup.add_field(name='\u200b', value='\u200b', inline=False)
+                        markup.add_field(name=f"Día {math.ceil(cont / 5) + 1} ({(dias[math.ceil(cont / 5) + 1])})",
+                                         value='---------------------------------------------'
+                                         )
 
-                cont += 1
-            await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
+                    cont += 1
+                await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
 
         else:
             print('Referencia inválida')  # Debugging
@@ -204,73 +271,138 @@ async def na(context, searchtype, *args):
     """Función que organiza la información de un jugador de la liga Americana"""
     print('---------------------------------------------------------------------')
     print('Comando de NA')  # Debugging
+    async with context.typing():
+        # Verificamos si el argumento no es nulo
+        if searchtype:
+            """Creamos listas con opciones para los tipos de búsquedas (No entiendo por qué mierda, pero en Python
+            aparentemente es más eficiente iterar por listas en vez de hacer comparaciones directas (????), no sé si
+            lo que leí es correcto, seguramente no, pero de esta forma es más fácil añadir keywords así que así se queda"""
+            # todo: investigate if method is efficient
+            # Julián del futuro, da lo mismo, pero el comentario se queda, me da pereza reescribirlo
+            opt_player = ['player', 'jugador', 'jug', 'ply']
+            opt_team = ['team', 'equipo', 'tm', 'eq']
+            opt_schedule = ['schedule', 'partidos', 'cronograma', 'matchups', 'sch', 'part', 'matches', 'mat']
 
-    # Verificamos si el argumento no es nulo
-    if searchtype:
-        """Creamos listas con opciones para los tipos de búsquedas (No entiendo por qué mierda, pero en Python
-        aparentemente es más eficiente iterar por listas en vez de hacer comparaciones directas (????), no sé si
-        lo que leí es correcto, seguramente no, pero de esta forma es más fácil añadir keywords así que así se queda"""
-        # todo: investigate if method is efficient
-        # Julián del futuro, da lo mismo, pero el comentario se queda, me da pereza reescribirlo
-        opt_player = ['player', 'jugador', 'jug', 'ply']
-        opt_team = ['team', 'equipo', 'tm', 'eq']
-        opt_schedule = ['schedule', 'partidos', 'cronograma', 'matchups', 'sch', 'part', 'matches', 'mat']
+            # Verificamos si la persona quiere mirar un jugador específico
+            if searchtype.lower() in opt_player:
 
-        # Verificamos si la persona quiere mirar un jugador específico
-        if searchtype.lower() in opt_player:
+                # Chiste contra rekkles, si el usuario escribe 'pecho frío' se reemplaza por rekkles
+                # Si no, se reemplazan los espacios por underscores
+                formatted = 'rekkles' if '_'.join(args) == 'pecho frio' else '_'.join(args)
+                player = TournamentData(league='LCS', query=formatted)
+                stats = player.get_player_stats()
 
-            # Chiste contra rekkles, si el usuario escribe 'pecho frío' se reemplaza por rekkles
-            # Si no, se reemplazan los espacios por underscores
-            formatted = 'rekkles' if '_'.join(args) == 'pecho frio' else '_'.join(args)
-            player = TournamentData(league='LCS', query=formatted)
-            stats = player.get_player_stats()
+                # Si stats es None, no se encontró el jugador buscado
+                if stats:
+                    pic = player.get_picture()
 
-            # Si stats es None, no se encontró el jugador buscado
-            if stats:
-                pic = player.get_picture()
+                    print(f"Jugador solicitado: {stats['player_name']}")  # Debugging
 
-                print(f"Jugador solicitado: {stats['player_name']}")  # Debugging
+                    # Obtenemos un markup hypertextual y lo enviamos
+                    markup = get_player_embed(stats, pic)
+                    await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
+                else:
+                    print('Jugador solicitado: Inválido')
+                    await context.channel.send("Ese jugador no existe en la base de datos, revisa la ortografía o "
+                                               "asegurate de que lo buscaste en la liga correcta")
+            elif searchtype.lower() in opt_team:
+                print('Busqueda por equipos')  # Debugging
+                # Diccionario de equipos válidos y sus posibles apodos
+                valid_teams = {
+                    '100_Thieves': ['100', '100 thieves', '100thieves', 'hundred thieves', 'hundredthieves'],
+                    'Cloud9': ['c9', 'cloud9', 'cloud 9', 'best team world'],
+                    'Counter_Logic_Gaming': ['clg', 'counter logic gaming', 'counter logic', 'counterlogic'],
+                    'Dignitas': ['dig', 'dignitas'],
+                    'Evil_Geniuses': ['eg', 'evil genius', 'evil geniuses', 'evilgenius', 'evilgeniuses'],
+                    'FlyQuest': ['fly', 'flyquest', 'treequest'],
+                    'Golden_Guardians': ['gg', 'ggs', 'golden guardians', 'goldenguardians'],
+                    'Immortals': ['imt', 'immortals'],
+                    'Team_Liquid': ['tl', 'team liquid', 'teamliquid'],
+                    'Team_SoloMid': ['tsm', 'tee es em', 'team solo mid', 'teamsolomid', 'team solomid', 'bjergsen y el resto']
+                }
 
-                # Obtenemos un markup hypertextual y lo enviamos
-                markup = get_player_embed(stats, pic)
+                # Buscamos el nombre del equipo en la lista de nombres y apodos
+                chosen_team = None
+                arg = ' '.join(args).lower()
+                for team in valid_teams:
+                    if arg in valid_teams[team]:
+                        chosen_team = team
+                        break  # Si encuentra el equipo, no debemos buscar mas, rompemos el ciclo
+
+                # Si la variable no es None, quiere decir que encontramos un equipo válido
+                if chosen_team:
+                    print(f'Equipo elegido: {chosen_team}')  # Debugging
+
+                    # Creamos el objeto buscador de información
+                    team_data = TournamentData('LCS', chosen_team)
+                    roster = team_data.get_players_in_team()
+
+                    # Markup hypertextual
+                    markup = discord.Embed(title=chosen_team.replace('_', ' '))
+                    markup.set_thumbnail(url=team_data.get_picture())
+
+                    # Diccionario para relacionar un número de iteración con una posición
+                    pos = {
+                        1: 'Top',
+                        2: 'Jungla',
+                        3: 'Mid',
+                        4: 'AD Carry',
+                        5: 'Soporte'
+                    }
+                    cont = 1
+                    for position in roster:
+                        # Añadimos un divisor que inicia la sección de posición
+                        markup.add_field(name=f'\nPosición: {pos[cont]}', value='-----------------------------',
+                                         inline=False)
+
+                        for player in position:
+                            # Agregamos el jugador de la posición (si hay suplentes, se añaden también)
+                            markup.add_field(
+                                name=player['name'],
+                                value=f"Partidos jugados con el equipo esta temporada: {player['games_played']}\n",
+                                inline=False
+                            )
+
+                        markup.add_field(name='\u200b', value='\u200b', inline=False)
+                        cont += 1
+
+                    await context.channel.send('Aquí tienes la información que encontré', embed=markup)
+                else:
+                    await context.channel.send("Lo siento, el equipo que ingresaste no es válido, revisa que estés "
+                                               "buscando en la liga correcta, o revisa tu ortografía, es recomendable "
+                                               "que utilices la denominación de nomenclatura del equipo. "
+                                               "(Ej: 'FNC', 'G2')")
+            elif searchtype.lower() in opt_schedule:
+                print('Solicitud de partidos')
+                tournament = TournamentData('LCS', None)
+                week = tournament.get_current_week()
+                matches = tournament.get_schedule()
+                markup = discord.Embed(title='Próximos partidos de la LCS', description='Verano 2020')
+                markup.set_footer(text=f'Semana de partidos: Semana {week}')
+
+                cont = 3
+                dias = {
+                    1: 'Viernes',
+                    2: 'Sábado',
+                    3: 'Domingo'
+                }
+                markup.add_field(name=f"Día {1} ({(dias[1])})",
+                                 value='---------------------------------------------'
+                                 )
+                for match in matches:
+                    markup.add_field(name=f'Partida {cont - 2}:', value=f'{match[0]} Vs. {match[1]}', inline=False)
+                    if cont % 4 == 0 and cont - 2 != len(matches):
+                        markup.add_field(name='\u200b', value='\u200b', inline=False)
+                        markup.add_field(name=f"Día {math.ceil(cont / 4) + 1} ({(dias[math.ceil(cont / 4) + 1])})",
+                                         value='---------------------------------------------'
+                                         )
+
+                    cont += 1
                 await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
+
             else:
-                print('Jugador solicitado: Inválido')
-                await context.channel.send("Ese jugador no existe en la base de datos, revisa la ortografía o "
-                                           "asegurate de que lo buscaste en la liga correcta")
-        elif searchtype.lower() in opt_team:
-            print('Busqueda por equipos')  # Debugging
-            await context.channel.send('Lo siento, aún no puedo buscar equipos :c')
-        elif searchtype.lower() in opt_schedule:
-            print('Solicitud de partidos')
-            tournament = TournamentData('LCS', None)
-            week = tournament.get_current_week()
-            matches = tournament.get_schedule()
-            markup = discord.Embed(title='Próximos partidos de la LCS', description='Verano 2020')
-            markup.set_footer(text=f'Semana de partidos: Semana {week}')
-
-            cont = 3
-            dias = {
-                1: 'Viernes',
-                2: 'Sábado',
-                3: 'Domingo'
-            }
-            markup.add_field(name=f"Día {1} ({(dias[1])})",
-                             value='---------------------------------------------'
-                             )
-            for match in matches:
-                markup.add_field(name=f'Partida {cont-2}:', value=f'{match[0]} Vs. {match[1]}', inline=False)
-                if cont % 4 == 0 and cont-2 != len(matches):
-                    markup.add_field(name=f"Día {math.ceil(cont / 4) + 1} ({(dias[math.ceil(cont / 4) + 1])})",
-                                     value='---------------------------------------------'
-                                     )
-
-                cont += 1
-            await context.channel.send(content='Aquí tienes la información que encontré', embed=markup)
-
-        else:
-            print('Referencia inválida')  # Debugging
-            await help(context, 'LCS')
+                print('Referencia inválida')  # Debugging
+                await help(context, 'LCS')
 
     print('---------------------------------------------------------------------')
 
@@ -727,7 +859,6 @@ async def na_error(ctx, error):
         print('---------------------------------------------------------------------')
 
 
-
 @add_paja.error
 async def paja_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
@@ -757,6 +888,26 @@ async def on_ready():
     print(client.user.name)  # Debugging
     print(client.user.id)  # Debugging
     print('---------------------------------------------------------------------')  # debugging
+
+
+@client.event
+async def on_message(context):
+
+    # Evento para poder hablar por privado al bot
+    if context.channel.id == 720366844372058192 and context.author.id == 301155670793781248:
+        message = str(context.content)
+        if message.startswith('/'):
+            if message.startswith('/anuncio'):
+                anuncio = message[8:]
+                markup = discord.Embed(title=anuncio, color=discord.colour.Color.red())
+                channels = client.get_all_channels()
+                print('---------------------------------------------------------------------')
+                print(f'Anuncio con información: {anuncio}')
+                for channel in channels:
+                    if isinstance(channel, discord.TextChannel):
+                        await channel.send('ANUNCIO IMPORTANTE @everyone!', embed=markup)
+
+                print('---------------------------------------------------------------------')
 
 
 def get_player_embed(stats: dict, pic: str):
