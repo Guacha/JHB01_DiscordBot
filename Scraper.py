@@ -155,6 +155,9 @@ class TournamentData:
 
         return roster
 
+    def get_team_champions(self):
+        url = ""
+
     def __init__(self, league, query):
         global LEAGUE, YEAR, SPLIT
         YEAR = '2020'  # Constante

@@ -580,6 +580,9 @@ async def get_builds(context, champ):
                 selecciones = '\n'.join(path[1])
                 markup.add_field(name=path_title, value=selecciones, inline=True)
 
+            # Espacio en blanco
+            markup.add_field(name='\u200b', value='\u200b', inline=False)
+
         markup.set_footer(text=f'Parche {champion.get_patch()}')
         await context.channel.send(content=None, embed=markup)
         print("Información enviada exitosamente")
@@ -635,6 +638,10 @@ async def get_builds(context, champ):
 
             else:  # Los primeros dos campos no van inline, tienen demasiada info
                 markup.add_field(name=noms[build], value=itemlist_markup, inline=False)
+
+                # Espacio en blanco
+                markup.add_field(name='\u200b', value='\u200b', inline=False)
+
         markup.set_footer(text=f'Parche {champion_data.get_patch()}')
         await context.channel.send(content=None, embed=markup)
         print("Información enviada exitosamente")
