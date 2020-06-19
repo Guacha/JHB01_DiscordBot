@@ -426,7 +426,7 @@ async def help(context, *args):
         # Usamos un ciclo para obtener todos los nombres únicos de los comandos
         command_names = []
         for command in all_commands:
-            if command_names.count(all_commands[command].name) == 0:
+            if not all_commands[command].hidden and command_names.count(all_commands[command].name) == 0:
                 command_names.append(all_commands[command].name)
 
         # Formamos un embed para enviar
@@ -444,7 +444,7 @@ async def help(context, *args):
         print(f'Ayuda con comando {args[0]}')
 
         # Verificamos si el comando existe
-        if args[0] in all_commands:
+        if args[0] in all_commands and not all_commands[args[0]].hidden:
             markup = discord.Embed(title=f'/{args[0]}')
             markup.add_field(name='Descripción', value=all_commands[args[0]].description)
             markup.add_field(name='Uso adecuado', value=all_commands[args[0]].usage)
@@ -838,6 +838,21 @@ async def penecito(context):
             'Me imagino que tu pene mide {} centímetros, {}'.format(sze, context.author.mention))
 
 
+@client.command(hidden=True)
+async def anuncio(context, *args):
+
+    # Evento para poder hablar por privado al bot
+    if context.author.id == 301155670793781248:
+        msg = ' '.join(args)
+        markup = discord.Embed(title=msg, color=discord.colour.Color.red())
+        channel = context.guild.text_channels[0]
+        print('---------------------------------------------------------------------')
+        print(f'Anuncio con información: {anuncio}')
+
+        await channel.send('ANUNCIO IMPORTANTE @everyone!', embed=markup)
+
+        print('---------------------------------------------------------------------')
+
 # Manejo de errores
 @eu.error
 async def eu_error(ctx, error):
@@ -888,26 +903,6 @@ async def on_ready():
     print(client.user.name)  # Debugging
     print(client.user.id)  # Debugging
     print('---------------------------------------------------------------------')  # debugging
-
-
-@client.event
-async def on_message(context):
-
-    # Evento para poder hablar por privado al bot
-    if context.channel.id == 720366844372058192 and context.author.id == 301155670793781248:
-        message = str(context.content)
-        if message.startswith('/'):
-            if message.startswith('/anuncio'):
-                anuncio = message[8:]
-                markup = discord.Embed(title=anuncio, color=discord.colour.Color.red())
-                channels = client.get_all_channels()
-                print('---------------------------------------------------------------------')
-                print(f'Anuncio con información: {anuncio}')
-                for channel in channels:
-                    if isinstance(channel, discord.TextChannel):
-                        await channel.send('ANUNCIO IMPORTANTE @everyone!', embed=markup)
-
-                print('---------------------------------------------------------------------')
 
 
 def get_player_embed(stats: dict, pic: str):
