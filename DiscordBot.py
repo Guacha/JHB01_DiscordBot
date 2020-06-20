@@ -17,6 +17,8 @@ client = Bot(command_prefix=PREFIX)  # Crear cliente de bot con el prefijo dado
 client.remove_command('help')
 database = Database()
 
+ansiados = {}
+
 
 def eliminar_penes():
     database.reset_all(393917904506191872)
@@ -140,7 +142,7 @@ async def eu(context, searchtype, *args):
             async with context.typing():
                 # Chiste contra rekkles, si el usuario escribe 'pecho frío' se reemplaza por rekkles
                 # Si no, se reemplazan los espacios por underscores
-                formatted = 'rekkles' if '_'.join(args) == 'pecho frio' else '_'.join(args)
+                formatted = 'rekkles' if ' '.join(args) == 'pecho frio' else '_'.join(args)
                 player = TournamentData(league='LEC', query=formatted)
                 stats = player.get_player_stats()
 
@@ -180,11 +182,11 @@ async def eu(context, searchtype, *args):
                 for team in valid_teams:
                     if arg in valid_teams[team]:
                         chosen_team = team
-                        break # Si encuentra el equipo, no debemos buscar mas, rompemos el ciclo
+                        break  # Si encuentra el equipo, no debemos buscar mas, rompemos el ciclo
 
                 # Si la variable no es None, quiere decir que encontramos un equipo válido
                 if chosen_team:
-                    print(f'Equipo elegido: {chosen_team}') # Debugging
+                    print(f'Equipo elegido: {chosen_team}')  # Debugging
 
                     # Creamos el objeto buscador de información
                     team_data = TournamentData('LEC', chosen_team)
@@ -318,7 +320,8 @@ async def na(context, searchtype, *args):
                     'Golden_Guardians': ['gg', 'ggs', 'golden guardians', 'goldenguardians'],
                     'Immortals': ['imt', 'immortals'],
                     'Team_Liquid': ['tl', 'team liquid', 'teamliquid'],
-                    'Team_SoloMid': ['tsm', 'tee es em', 'team solo mid', 'teamsolomid', 'team solomid', 'bjergsen y el resto']
+                    'Team_SoloMid': ['tsm', 'tee es em', 'team solo mid', 'teamsolomid', 'team solomid',
+                                     'bjergsen y el resto']
                 }
 
                 # Buscamos el nombre del equipo en la lista de nombres y apodos
@@ -752,7 +755,7 @@ async def get_pajas(context):
     await context.channel.send(f'El servidor en conjunto lleva un gran total de {total} pajas')
 
 
-@commands.cooldown(1, 5, commands.BucketType.user)  # Fue necesario implementar un cooldown (Gracias Miguel)
+@commands.cooldown(1, 10, commands.BucketType.user)  # Fue necesario implementar un cooldown (Gracias Miguel)
 @client.command(name='paja',
                 description='Comando que añade una paja a tu cuenta de pajas en el servidor',
                 brief='El bot te cuenta las pajas!',
@@ -780,6 +783,7 @@ async def add_paja(context):
 
         # Le hacemos saber al usuario cuantas pajas lleva
         await context.channel.send('Llevas {} pajas, {}!'.format(pajas + 1, context.author.mention))
+        ansiados[context.author.id] = 0
 
     else:
         # Si el usuario no aparece en la lista, nunca ha usado el comando, debemos crear la entrada en la lista
@@ -847,18 +851,30 @@ async def penecito(context):
 
 @client.command(hidden=True)
 async def anuncio(context, *args):
+    """Comando para poder enviar anuncios, solo la persona con el pene más grande los puede enviar"""
 
-    # Evento para poder hablar por privado al bot
-    if context.author.id == 301155670793781248:
+    # Obtenemos el UUID de la persona con el pene más grande (el admin)
+    admin_uuid, _ = database.get_pene_mayor(context.guild.id)
+    admin_user = await client.fetch_user(admin_uuid)
+
+    # Obtenemos el primer canal de la lista de canales de texto
+    channel = context.guild.text_channels[0]
+
+    # Verificamos si el UUID del autor del comando es igual al del que deberia ser admin
+    if context.author.id == int(admin_uuid):
+        await context.message.delete()
         msg = ' '.join(args)
-        markup = discord.Embed(title=msg, color=discord.colour.Color.red())
-        channel = context.guild.text_channels[0]
+        markup = discord.Embed(title=msg, color=admin_user.colour)
         print('---------------------------------------------------------------------')
         print(f'Anuncio con información: {anuncio}')
 
-        await channel.send('ANUNCIO IMPORTANTE @everyone!', embed=markup)
+        await channel.send(f'SU ADMIN, {admin_user.mention}, HA HABLADO @everyone!', embed=markup)
 
         print('---------------------------------------------------------------------')
+    else:
+
+        await channel.send(f"No eres admin, tu pene es inferior al de {admin_user.mention}")
+
 
 # Manejo de errores
 @eu.error
@@ -882,23 +898,39 @@ async def na_error(ctx, error):
 
 
 @add_paja.error
-async def paja_error(ctx, error):
+async def paja_error(ctx: discord.ext.commands.Context, error):
     if isinstance(error, commands.CommandOnCooldown):
-        if ctx.message.author.id == 261303165150953472:  # Si es Miguel
+        print('---------------------------------------------------------------------')
+        if ansiados.get(ctx.message.author.id) == 2:  # Si ya ha sido un ansiado por mucho tiempo
+            print("Ansiado castigado")
             client.get_command('paja').reset_cooldown(ctx)
-            await ctx.channel.send(content='Si te vas a poner con tu perro spam, puedes comer mierda, '
-                                           'y te va a tocar esperar',
-                                   embed=discord.Embed(title='Tiempo para siguiente paja',
-                                                       description=f'{str(error.retry_after)} segundos'
+            ansiados[ctx.author.id] += 1
+            await ctx.channel.send(content='Por marica, mereces un castigo',
+                                   embed=discord.Embed(title='ANUNCIO DE TAMAÑO DE PENE',
+                                                       description=f'{ctx.message.author.mention}: El tamaño de tu '
+                                                                   f'pene ha sido reducido en 1 cm'
                                                        )
                                    )
-        else:
+            size = database.get_pene(ctx.guild.id, ctx.message.author.id)
+            database.set_pene(ctx.guild.id, ctx.message.author.id, size - 1)
+
+        elif ansiados.get(ctx.message.author.id) > 2:
+
+            print("Ansiado sigue insistiendo, no se le respondió")  # Debugging
+
+        else:  # Si es un ansiado menos de 3 veces
+
+            print(f"Paja ansiada, contador: {ansiados[ctx.author.id]}")  # Debugging
+
+            ansiados[ctx.author.id] += 1
+
+            markup = discord.Embed(title='Tiempo para siguiente paja', description=f'{str(error.retry_after)} segundos')
+            markup.add_field(name='Contador de ansiedad', value=f'Has sido un ansiado {ansiados[ctx.author.id]} veces')
             await ctx.channel.send(content='Malparido ansiado de mierda, aguanta un poquito, se te va a caer la verga '
                                            'hijo de tu mil puta madre',
-                                   embed=discord.Embed(title='Tiempo para siguiente paja',
-                                                       description=f'{str(error.retry_after)} segundos'
-                                                       )
-                                   )
+                                   embed=markup)
+
+        print('---------------------------------------------------------------------')
 
 
 # Eventos
