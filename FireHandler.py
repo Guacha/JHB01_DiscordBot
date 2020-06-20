@@ -116,4 +116,3 @@ class Database:
         return res
 
 
-nepe = Database()
