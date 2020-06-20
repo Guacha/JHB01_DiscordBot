@@ -65,7 +65,7 @@ class Database:
 
         if cont_act.val():
             return cont_act.val()
-        else: # En caso de que el contador aún no se haya creado en la base de datos
+        else:  # En caso de que el contador aún no se haya creado en la base de datos
             self.__db.child(guid).child('server-stats').update({'reset-timer': 10079})
             return 10079
 
@@ -100,7 +100,8 @@ class Database:
         res = {}
         for user in guild_users.each():
             if 'pajas' in user.val():
-                res[user.key()] = user.val()['pajas']
+                if user.val()['pajas'] > 0:
+                    res[user.key()] = user.val()['pajas']
 
         return res
 
@@ -115,4 +116,15 @@ class Database:
 
         return res
 
+    def get_pene_mayor(self, guid):
+        penes = self.get_all_penes(guid)
+
+        max_tam = -1
+        max_uuid = -1
+        for uuid in penes:
+            if penes[uuid] > max_tam:
+                max_tam = penes[uuid]
+                max_uuid = uuid
+
+        return max_uuid, max_tam
 
