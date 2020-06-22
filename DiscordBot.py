@@ -2,9 +2,9 @@ import os
 import random
 import discord
 import math
-from FireHandler import Database
+import Scraper as miner
 
-from Scraper import WinrateData, ChampionData, TournamentData
+from FireHandler import Database
 from discord.ext.commands import Bot
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
@@ -115,6 +115,95 @@ async def upd_cont_reset():
                     await channel.send("Los penes han sido eliminados @everyone")
 
 
+@client.command(name='poll',
+                description='Comando para generar una encuesta en el servidor',
+                brief='Genera una encuesta!',
+                aliases=['Poll', 'POLL', 'encuesta', 'Encuesta', 'ENCUESTA'],
+                usage='/poll {(comando) crear|votar} {nombre} {titulo} {tipo (yn|ynm|num)}',
+                pass_context=True)
+async def poll(ctx, type, title, *args):
+    """Función que maneja todas las opciones del comando de encuestas"""
+    print('---------------------------------------------------------------------')
+    print('Comando poll')  # Debugging
+
+    # Solo el admin debería poder usar las encuestas, luego nececitamos el UUID del admin
+    admin_uuid, _ = database.get_pene_mayor(ctx.guild.id)
+
+    # Verificamos que el admin sea quien usó el comando
+    if int(admin_uuid) == ctx.author.id:
+
+        if type.lower() == 'yn' or type.lower() == 'sn':
+
+            embed = discord.Embed(title=title)
+            embed.set_footer(text='Vota usando los botones de aquí abajo')
+            embed.add_field(name='Si', value=':+1:')
+            embed.add_field(name='No', value=':-1:')
+
+            message = await ctx.guild.text_channels[0].send('@everyone Respondan a la siguiente encuesta: ',
+                                                            embed=embed)
+            await message.add_reaction('👍')
+            await message.add_reaction('👎')
+
+            print('Encuesta tipo YES/NO Creada exitosamente')
+            print(f'Título de la encuesta: {title}')
+
+    else: # Para los plebeyos
+        admin = await client.fetch_user(admin_uuid)
+        await ctx.channel.send(f"No eres admin, tu pene es inferior al de {admin.mention}")
+
+    print('---------------------------------------------------------------------')
+
+
+@client.command(name='GG',
+                description='Comando para buscar un jugador en OP.GG',
+                aliases=['gg', 'Gg'],
+                usage='/GG {Nombre de invocador} {Región (Opcional)}',
+                pass_context=True)
+async def gg(ctx, summ, *args):
+    if len(args) == 0:
+        player = miner.PlayerData(summ)
+        ign = player.get_summoner_name()
+        if ign is not None:
+            player_stats = discord.Embed(title=f'Estadísticas de {ign}', url=player.get_url(),
+                                         description=f'Última actualización: {player.get_last_update()}')
+            player_stats.set_footer(text="Información obtenida de OP.GG")
+            player_stats.set_thumbnail(url=player.get_summoner_icon())
+
+            # Campos de rango
+            solo_rank, flex_rank = player.get_summoner_rank()
+
+            player_stats.add_field(name='Rango Solo/Dúo',
+                                   value=f'{solo_rank[0]}, {solo_rank[1]} (Winrate: {solo_rank[2]})',
+                                   inline=True)
+            player_stats.add_field(name='Rango Flex Queue',
+                                   value=f'{flex_rank[0]}, {flex_rank[1]} (Winrate: {flex_rank[2]})',
+                                   inline=True)
+
+            # Spacer
+            player_stats.add_field(name='\u200b', value='\u200b', inline=False)
+
+            # Campos de campeones preferidos
+            champos = player.get_most_played()
+
+            # Esta linea la hizo @AndicsMG y no tengo ni puta idea de lo que hace,
+            # hasta donde entiendo es un for loop inline, este lenguaje está OP
+            string = "\n\n".join(
+                [f'{champ[0]}: {champ[1]} de WR en {champ[3]} partidas ({champ[2]} KDA)' for champ in champos]
+            )
+            player_stats.add_field(name='Campeones más jugados', value=string)
+
+            # Campo para campeones recientemente jugados
+
+            # De nuevo, grax @AndicsMG, ni me voy a molestar en explicar lo que hace porque ni lo entiendo
+            string = "\n\n".join(
+                [f'{champ[0]}: {champ[1]} Winrate ({champ[2]}W/{champ[3]}L)' for champ in player.get_recent_plays()]
+            )
+
+            player_stats.add_field(name='Campeones jugados en los últimos 7 días', value=string)
+
+            await ctx.send('Aquí tienes la información que he encontrado: ', embed=player_stats)
+
+
 @client.command(name='LEC',
                 description='Comando para obtener información de la liga profesional de Europa (LEC)',
                 brief='Busca un jugador/equipo europeo',
@@ -143,7 +232,7 @@ async def eu(context, searchtype, *args):
                 # Chiste contra rekkles, si el usuario escribe 'pecho frío' se reemplaza por rekkles
                 # Si no, se reemplazan los espacios por underscores
                 formatted = 'rekkles' if ' '.join(args) == 'pecho frio' else '_'.join(args)
-                player = TournamentData(league='LEC', query=formatted)
+                player = miner.TournamentData(league='LEC', query=formatted)
                 stats = player.get_player_stats()
 
                 # Si stats es None, no se encontró el jugador buscado
@@ -189,7 +278,7 @@ async def eu(context, searchtype, *args):
                     print(f'Equipo elegido: {chosen_team}')  # Debugging
 
                     # Creamos el objeto buscador de información
-                    team_data = TournamentData('LEC', chosen_team)
+                    team_data = miner.TournamentData('LEC', chosen_team)
                     roster = team_data.get_players_in_team()
 
                     # Markup hypertextual
@@ -229,8 +318,8 @@ async def eu(context, searchtype, *args):
                                                "(Ej: 'FNC', 'G2')")
         elif searchtype.lower() in opt_schedule:
             async with context.typing():
-                print('Solicitud de partidos')
-                tournament = TournamentData('LEC', None)
+                print('Solicitud de partidos') # Debugging
+                tournament = miner.TournamentData('LEC', None)
                 week = tournament.get_current_week()
                 matches = tournament.get_schedule()
                 markup = discord.Embed(title='Próximos partidos de la LEC', description='Verano 2020')
@@ -290,8 +379,8 @@ async def na(context, searchtype, *args):
 
                 # Chiste contra rekkles, si el usuario escribe 'pecho frío' se reemplaza por rekkles
                 # Si no, se reemplazan los espacios por underscores
-                formatted = 'rekkles' if '_'.join(args) == 'pecho frio' else '_'.join(args)
-                player = TournamentData(league='LCS', query=formatted)
+                formatted = 'bjergsen' if ' '.join(args) == 'pecho frio' else '_'.join(args)
+                player = miner.TournamentData(league='LCS', query=formatted)
                 stats = player.get_player_stats()
 
                 # Si stats es None, no se encontró el jugador buscado
@@ -337,7 +426,7 @@ async def na(context, searchtype, *args):
                     print(f'Equipo elegido: {chosen_team}')  # Debugging
 
                     # Creamos el objeto buscador de información
-                    team_data = TournamentData('LCS', chosen_team)
+                    team_data = miner.TournamentData('LCS', chosen_team)
                     roster = team_data.get_players_in_team()
 
                     # Markup hypertextual
@@ -377,7 +466,7 @@ async def na(context, searchtype, *args):
                                                "(Ej: 'FNC', 'G2')")
             elif searchtype.lower() in opt_schedule:
                 print('Solicitud de partidos')
-                tournament = TournamentData('LCS', None)
+                tournament = miner.TournamentData('LCS', None)
                 week = tournament.get_current_week()
                 matches = tournament.get_schedule()
                 markup = discord.Embed(title='Próximos partidos de la LCS', description='Verano 2020')
@@ -508,7 +597,7 @@ async def get_winrate(context, *args):
 
     if len(args) == 2:  # Si el usuario ingresó campeón + linea
         if args[1] in lineas_validas:
-            winrate_scraper = WinrateData(champ=args[0], lane=[lineas_validas[args[1]]])
+            winrate_scraper = miner.WinrateData(champ=args[0], lane=[lineas_validas[args[1]]])
             stats = winrate_scraper.get_champ_stats()
             if stats:
                 print(f'Winrate de {args[0]} de {lineas_validas[args[1]]}')
@@ -563,7 +652,7 @@ async def get_builds(context, champ):
     }
 
     # Creamos el objeto campeón para buscar la info
-    champion = ChampionData(champ.lower())
+    champion = miner.ChampionData(champ.lower())
     champ = champion.get_champ_name()
     # Usamos la funcion de ChampionData para obtener las runas y procesarlas
     runes = champion.runes
@@ -610,7 +699,7 @@ async def get_builds(context, champ):
     print(f'Campeón seleccionado: {champ}')
 
     # Creamos el objeto que contiene los datos del champ que se requiera
-    champion_data = ChampionData(champ.lower())
+    champion_data = miner.ChampionData(champ.lower())
     champ = champion_data.get_champ_name()
 
     # Tenemos un diccionario para relacionar cada build a un título y una cadena bien formada
@@ -755,7 +844,7 @@ async def get_pajas(context):
     await context.channel.send(f'El servidor en conjunto lleva un gran total de {total} pajas')
 
 
-@commands.cooldown(1, 10, commands.BucketType.user)  # Fue necesario implementar un cooldown (Gracias Miguel)
+@commands.cooldown(1, 20, commands.BucketType.user)  # Fue necesario implementar un cooldown (Gracias Miguel)
 @client.command(name='paja',
                 description='Comando que añade una paja a tu cuenta de pajas en el servidor',
                 brief='El bot te cuenta las pajas!',
@@ -912,11 +1001,13 @@ async def paja_error(ctx: discord.ext.commands.Context, error):
                                                        )
                                    )
             size = database.get_pene(ctx.guild.id, ctx.message.author.id)
-            database.set_pene(ctx.guild.id, ctx.message.author.id, size - 1)
+            if size > 0:
+                database.set_pene(ctx.guild.id, ctx.message.author.id, size - 1)
 
         elif ansiados.get(ctx.message.author.id) > 2:
-
-            print("Ansiado sigue insistiendo, no se le respondió")  # Debugging
+            client.get_command('paja').reset_cooldown(ctx)
+            print("Ansiado sigue insistiendo, por spammer no se le respondió")  # Debugging
+            await ctx.message.delete()
 
         else:  # Si es un ansiado menos de 3 veces
 

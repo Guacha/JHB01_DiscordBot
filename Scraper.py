@@ -4,6 +4,96 @@ import re
 import math
 
 
+class PlayerData:
+
+    def get_url(self):
+        return f'https://{self.region}.op.gg/summoner/userName={self.summoner}'
+
+    def get_soup(self):
+        url = f'https://{self.region}.op.gg/summoner/userName={self.summoner}'
+        webpage = requests.get(url=url)
+        return BeautifulSoup(webpage.content, 'html.parser')
+
+    def __init__(self, summoner: str, region='lan'):
+        self.region = region
+        self.summoner = summoner
+        self.soup = self.get_soup()
+
+    def get_summoner_name(self):
+        info_div = self.soup.find('div', class_='Information')
+        try:
+            return info_div.span.get_text()
+        except AttributeError:
+            return None
+
+    def get_last_update(self):
+        update = self.soup.find('div', class_='LastUpdate').get_text()
+        return update[17:]
+
+    def get_summoner_rank(self):
+        solo_info = self.soup.find('div', class_='SummonerRatingMedium')
+        flex_info = self.soup.find('div', class_='sub-tier')
+
+        # Obtener la división del jugador
+        solo_rank = solo_info.find('div', class_='TierRank').string
+        flex_rank = flex_info.div.find('div', class_='sub-tier__rank-tier').string.strip()
+
+        # Obtener la medalla (Ícono de liga) del jugador
+        solo_medal = f"https:{solo_info.div.img['src']}"
+        flex_medal = f"https:{flex_info.img['src']}"
+
+        # Obtener el LP del jugador
+        solo_lp = solo_info.find('span', class_="LeaguePoints").string.strip()
+        flex_lp = flex_info.find('div', class_='sub-tier__league-point').get_text()
+        flex_lp = flex_lp[0:flex_lp.find('/')]  # Splicing para quitar texto innecesario
+
+        # Obtener winrate del jugador
+        solo_winrate = solo_info.find('span', class_='winratio').string[10:]
+        flex_winrate = flex_info.find('div', class_='sub-tier__gray-text').string.strip()[9:]
+
+        # Organizar la información en una tupla
+        solo_player_data = (solo_rank, solo_lp, solo_winrate)
+        flex_player_data = (flex_rank, flex_lp, flex_winrate)
+
+        return solo_player_data, flex_player_data
+
+    def get_summoner_icon(self):
+        icon = self.soup.find('img', class_='ProfileImage')['src']
+        return f'https:{icon}'
+
+    def get_most_played(self):
+        champs_data = self.soup.find_all('div', class_='ChampionBox Ranked')
+        player_data = []
+        for champ in champs_data:
+            champ_name = champ.find('div', class_='ChampionName').a.get_text().strip()
+            champ_winrate = champ.find('div', class_='WinRatio').get_text().strip()
+            champ_kda = champ.find('span', class_='KDA').get_text()[:-2]
+            champ_games = champ.find('div', class_='Title').get_text()
+            champ_games = champ_games[0:champ_games.find(' ')]
+            player_data.append((champ_name, champ_winrate, champ_kda, champ_games))
+
+        return player_data
+
+    def get_recent_plays(self):
+        champs_data = self.soup.find_all('div', class_='ChampionWinRatioBox')
+
+        player_data = []
+        for champ in champs_data:
+            champ_name = champ.find('div', class_='ChampionName').a.get_text().strip()
+            champ_winrate = champ.find('div', class_='WinRatio').get_text().strip()
+
+            wins = losses = 0
+            for lobside in champ.find('div', class_='Graph').find_all('div'):
+                if 'Text' in lobside['class']:
+                    if 'Left' in lobside['class']:
+                        wintext = lobside.get_text().strip()
+                        wins = int(wintext[:wintext.find('W')])
+                    elif 'Right' in lobside['class']:
+                        losstext = lobside.get_text().strip()
+                        losses = int(losstext[:losstext.find('L')])
+            yield (champ_name, champ_winrate, wins, losses)
+
+
 class TournamentData:
     """Esta clase contendrá los queries de torneo que se necesiten de jugadores o posiciones"""
     YEAR = ""
