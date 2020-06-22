@@ -160,48 +160,49 @@ async def poll(ctx, type, title, *args):
                 usage='/GG {Nombre de invocador} {Región (Opcional)}',
                 pass_context=True)
 async def gg(ctx, summ, *args):
-    if len(args) == 0:
-        player = miner.PlayerData(summ)
-        ign = player.get_summoner_name()
-        if ign is not None:
-            player_stats = discord.Embed(title=f'Estadísticas de {ign}', url=player.get_url(),
-                                         description=f'Última actualización: {player.get_last_update()}')
-            player_stats.set_footer(text="Información obtenida de OP.GG")
-            player_stats.set_thumbnail(url=player.get_summoner_icon())
+    async with ctx.typing():
+        if len(args) == 0:
+            player = miner.PlayerData(summ)
+            ign = player.get_summoner_name()
+            if ign is not None:
+                player_stats = discord.Embed(title=f'Estadísticas de {ign}', url=player.get_url(),
+                                             description=f'Última actualización: {player.get_last_update()}')
+                player_stats.set_footer(text="Información obtenida de OP.GG")
+                player_stats.set_thumbnail(url=player.get_summoner_icon())
 
-            # Campos de rango
-            solo_rank, flex_rank = player.get_summoner_rank()
+                # Campos de rango
+                solo_rank, flex_rank = player.get_summoner_rank()
 
-            player_stats.add_field(name='Rango Solo/Dúo',
-                                   value=f'{solo_rank[0]}, {solo_rank[1]} (Winrate: {solo_rank[2]})',
-                                   inline=True)
-            player_stats.add_field(name='Rango Flex Queue',
-                                   value=f'{flex_rank[0]}, {flex_rank[1]} (Winrate: {flex_rank[2]})',
-                                   inline=True)
+                player_stats.add_field(name='Rango Solo/Dúo',
+                                       value=f'{solo_rank[0]}, {solo_rank[1]} (Winrate: {solo_rank[2]})',
+                                       inline=True)
+                player_stats.add_field(name='Rango Flex Queue',
+                                       value=f'{flex_rank[0]}, {flex_rank[1]} (Winrate: {flex_rank[2]})',
+                                       inline=True)
 
-            # Spacer
-            player_stats.add_field(name='\u200b', value='\u200b', inline=False)
+                # Spacer
+                player_stats.add_field(name='\u200b', value='\u200b', inline=False)
 
-            # Campos de campeones preferidos
-            champos = player.get_most_played()
+                # Campos de campeones preferidos
+                champos = player.get_most_played()
 
-            # Esta linea la hizo @AndicsMG y no tengo ni puta idea de lo que hace,
-            # hasta donde entiendo es un for loop inline, este lenguaje está OP
-            string = "\n\n".join(
-                [f'{champ[0]}: {champ[1]} de WR en {champ[3]} partidas ({champ[2]} KDA)' for champ in champos]
-            )
-            player_stats.add_field(name='Campeones más jugados', value=string)
+                # Esta linea la hizo @AndicsMG y no tengo ni puta idea de lo que hace,
+                # hasta donde entiendo es un for loop inline, este lenguaje está OP
+                string = "\n\n".join(
+                    [f'{champ[0]}: {champ[1]} de WR en {champ[3]} partidas ({champ[2]} KDA)' for champ in champos]
+                )
+                player_stats.add_field(name='Campeones más jugados', value=string)
 
-            # Campo para campeones recientemente jugados
+                # Campo para campeones recientemente jugados
 
-            # De nuevo, grax @AndicsMG, ni me voy a molestar en explicar lo que hace porque ni lo entiendo
-            string = "\n\n".join(
-                [f'{champ[0]}: {champ[1]} Winrate ({champ[2]}W/{champ[3]}L)' for champ in player.get_recent_plays()]
-            )
+                # De nuevo, grax @AndicsMG, ni me voy a molestar en explicar lo que hace porque ni lo entiendo
+                string = "\n\n".join(
+                    [f'{champ[0]}: {champ[1]} Winrate ({champ[2]}W/{champ[3]}L)' for champ in player.get_recent_plays()]
+                )
 
-            player_stats.add_field(name='Campeones jugados en los últimos 7 días', value=string)
+                player_stats.add_field(name='Campeones jugados en los últimos 7 días', value=string)
 
-            await ctx.send('Aquí tienes la información que he encontrado: ', embed=player_stats)
+                await ctx.send('Aquí tienes la información que he encontrado: ', embed=player_stats)
 
 
 @client.command(name='LEC',
