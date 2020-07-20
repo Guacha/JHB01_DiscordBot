@@ -295,7 +295,70 @@ class WinrateData:
 
 class ChampionData:
     """Esta clase contiene la información organizada del campeón que se le otorgó de la página champion.gg
-    todo: runes, matchups, winrates"""
+    todo: matchups"""
+
+    def rune_translate(self, rune_name):
+
+        # Diccionario de runas con su traducción
+        rune_to_spanish = {
+            # Árboles principales
+            'Precision': 'Precisión (Amarilla)',
+            'Sorcery': 'Brujería (Azúl)',
+            'Domination': 'Dominación (Roja)',
+            'Resolve': 'Valor (Verde)',
+            'Inspiration': 'Inspiración',
+
+            # Keystones Precisión
+            'Conqueror': 'Conquistador',
+            'Lethal Tempo': 'Cadencia Letal',
+            'Press the Attack': 'Estrategia Ofensiva',
+            'Fleet Footwork': 'Sobre la Marcha',
+
+            # Secundarias precisión
+            'Triumph': 'Triunfo (M)',
+            'Presence of Mind': 'Concentración Profunda (D)',
+            'Overheal': 'Sobrecuración (I)',
+            'Legend: Alacrity': 'Leyenda: Celeridad (I)',
+            'Legend: Bloodline': 'Leyenda: Linaje (D)',
+            'Legend: Tenacity': 'Leyenda: Tenacidad (M)',
+            'Last Stand': 'La Última Batalla (D)',
+            'Cut Down': 'Corte (M)',
+            'Coup de Grace': 'Golpe de Gracia (I)',
+
+            # Keystones Dominación
+            'Electrocute': 'Electrocutar',
+            'Predator': 'Depredador',
+            'Dark Harvest': 'Cosecha Oscura',
+            'Hail of Blades': 'Lluvia de Espadas',
+
+            # Secundarias Dominación
+            'Cheap Shot': 'Golpe Bajo (I)',
+            'Taste of Blood': 'Sabor a Sangre (M)',
+            'Sudden Impact': 'Impacto Súbito (D)',
+            'Zombie Ward': 'Centinela Zombi (I)',
+            'Ghost Poro': 'Poro Fantasma (M)',
+            'Eyeball Collection': 'Colección de Ojos (D)',
+            'Ravenous Hunter': 'Cazador Voraz (I)',
+            'Ingenious Hunter': 'Cazador Ingenioso (MI)',
+            'Relentless Hunter': 'Cazador Implacable (MD)',
+            'Ultimate Hunter': 'Cazador Definitivo (D)',
+
+            # Keystones Brujería
+            'Arcane Comet': 'Cometa Arcano',
+            'Summon Aery': 'Invocación: Aery',
+            'Phase Rush': 'Fase Veloz',
+
+            # Secundarias Brujería
+            'Nullifying Orb': 'Orbe de Anulación (I)',
+            'Manaflow Band': 'Anillo de Flujo de Maná (M)',
+            'Nimbus Cloak': 'Capa del Nimbo (D)',
+
+        }
+
+        if rune_name in rune_to_spanish:
+            return rune_to_spanish[rune_name]
+        else:
+            return rune_name
 
     def arr_builds(self):
         """Este metodo obtiene los arreglos de builds y objetos iniciales del champ, y retorna un diccionario con los
@@ -326,6 +389,55 @@ class ChampionData:
                 cont += 1
 
         return builds
+
+    def arr_skill_order(self):
+        """Obtenemos el orden recomendado y de mayor winrate de las skills del campeón, y retornamos dos listas que
+        los contienen"""
+
+        # Obtenemos las tablas que muestran el orden de las Skills
+        skill_grids = self.structure.find_all('div', class_='skill-order clearfix')
+
+        # diccionario que contendrá las listas de forma ordenada
+        skill_order = {
+            1: [],
+            2: []
+        }
+
+        # Contador para saber en qué entrada del diccionario estamos
+        cont = 1
+
+        # Recorremos las tablas de skills
+        for skill_grid in skill_grids:
+
+            # Obtenemos las habilidades, y las separamos en 4 tablas distintas
+            skills = skill_grid.find_all('div', class_='skill-selections')[1:]
+            q_points = skills[0].find_all('div')
+            w_points = skills[1].find_all('div')
+            e_points = skills[2].find_all('div')
+            r_points = skills[3].find_all('div')
+
+            # Para cada uno de los 18 niveles
+            for x in range(18):
+                if q_points[x]['class'] == ['selected']:
+                    skill_order[cont].append('Q')
+                    continue
+
+                if w_points[x]['class'] == ['selected']:
+                    skill_order[cont].append('W')
+                    continue
+
+                if e_points[x]['class'] == ['selected']:
+                    skill_order[cont].append('E')
+                    continue
+
+                if r_points[x]['class'] == ['selected']:
+                    skill_order[cont].append('R')
+                    continue
+
+            # Aumentamos el contador
+            cont += 1
+
+        return skill_order[1], skill_order[2]
 
     def arr_runes(self):
         """Este método obtiene los árboles de runas más comunes y de mayor winrate del campeón dado y
@@ -368,9 +480,12 @@ class ChampionData:
                         """Normalmente el nombre obtenido de la runa tiene un montón de whitespace, 
                         así que debemos quitarlo, además, viene con una descripción que sobra, entonces
                         tomamos solo el primer elemento de una lista al separarlo por \n"""
-                        runes_in_path.append(choice.get_text().rstrip().lstrip().split('\n')[0])
+                        rune_text = choice.get_text().rstrip().lstrip().split('\n')[0]
 
-                rune_tree.append((chosen_path, runes_in_path))  # Metemos el título y la lista de runas como tupla
+                        runes_in_path.append(self.rune_translate(rune_text))
+
+                # Metemos el título y la lista de runas como tupla
+                rune_tree.append((self.rune_translate(chosen_path), runes_in_path))
                 ramas += 1
 
                 # Si ya llegamos a la segunda rama, quiere decir que tenemos un árbol completo
@@ -393,7 +508,11 @@ class ChampionData:
         analysis_holder = self.structure.find('div', class_='analysis-holder')
         return analysis_holder.find_next('strong').get_text()
 
-    def __init__(self, champion):
+    def get_active_position(self):
+        role_holder = self.structure.find_all('li', class_="selected-role")[1]
+        return role_holder.a.h3.get_text().strip()
+
+    def __init__(self, champion, lane=None):
         self.builds = None
         self.runes = None
         self.matchups = None
@@ -401,7 +520,7 @@ class ChampionData:
         self.champion = None
         self.champ_icon = None
         self.patch = None
-        self.url = f"https://champion.gg/champion/{champion}"
+        self.url = f"https://champion.gg/champion/{champion}/{lane if lane else ''}"
         html = requests.get(self.url)
         self.structure = BeautifulSoup(html.content, 'html.parser')
         if len(self.structure.find_all('div', class_="large-header")) != 0:
@@ -412,3 +531,8 @@ class ChampionData:
             self.champ_icon = self.get_champ_icon()
             self.champion = self.get_champ_name()
             self.patch = self.get_patch()
+
+
+if __name__ == '__main__':
+    champ = ChampionData('sett')
+    print(champ.get_active_position())

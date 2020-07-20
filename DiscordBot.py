@@ -133,7 +133,6 @@ async def poll(ctx, type, title, *args):
     if int(admin_uuid) == ctx.author.id:
 
         if type.lower() == 'yn' or type.lower() == 'sn':
-
             embed = discord.Embed(title=title)
             embed.set_footer(text='Vota usando los botones de aquí abajo')
             embed.add_field(name='Si', value=':+1:')
@@ -147,7 +146,7 @@ async def poll(ctx, type, title, *args):
             print('Encuesta tipo YES/NO Creada exitosamente')
             print(f'Título de la encuesta: {title}')
 
-    else: # Para los plebeyos
+    else:  # Para los plebeyos
         admin = await client.fetch_user(admin_uuid)
         await ctx.channel.send(f"No eres admin, tu pene es inferior al de {admin.mention}")
 
@@ -319,7 +318,7 @@ async def eu(context, searchtype, *args):
                                                "(Ej: 'FNC', 'G2')")
         elif searchtype.lower() in opt_schedule:
             async with context.typing():
-                print('Solicitud de partidos') # Debugging
+                print('Solicitud de partidos')  # Debugging
                 tournament = miner.TournamentData('LEC', None)
                 week = tournament.get_current_week()
                 matches = tournament.get_schedule()
@@ -641,7 +640,7 @@ async def get_winrate(context, *args):
                 aliases=['Runas', 'runes', 'Runes', 'RUNAS', 'RUNES'],
                 usage='/runas {campeón}',
                 pass_context=True)
-async def get_builds(context, champ):
+async def get_runes(context, champ):
     print('---------------------------------------------------------------------')
     print('Comando de builds')  # Debugging
     print(f'Campeón seleccionado: {champ}')
@@ -692,16 +691,13 @@ async def get_builds(context, champ):
                 aliases=['Build', 'builds', 'BUILD', 'Builds', 'BUILDS'],
                 usage='/build {campeón}',
                 pass_context=True)
-async def get_builds(context, champ):
+async def get_builds(context, champ, lane=""):
     """Con esta funcion se obtienen las builds del scraper, y se entregan al usuario"""
 
     print('---------------------------------------------------------------------')
     print('Comando de builds')  # Debugging
     print(f'Campeón seleccionado: {champ}')
-
-    # Creamos el objeto que contiene los datos del champ que se requiera
-    champion_data = miner.ChampionData(champ.lower())
-    champ = champion_data.get_champ_name()
+    print(f'Rol seleccionado: {lane}')
 
     # Tenemos un diccionario para relacionar cada build a un título y una cadena bien formada
     noms = {
@@ -711,30 +707,116 @@ async def get_builds(context, champ):
         4: f'Iniciales con mayor winrate de {champ}'
     }
 
+    # Diccionario para traducir lineas válidas
+    lineas_validas = {
+        'top': 'top',
+        'jungle': 'jungle',
+        'jungla': 'jungle',
+        'mid': 'mid',
+        'medio': 'mid',
+        'middle': 'mid',
+        'bot': 'adc',
+        'adc': 'adc',
+        'carry': 'adc',
+        'sup': 'support',
+        'support': 'support',
+        'soporte': 'support'
+    }
+
+    # Creamos el objeto que contiene los datos del champ que se requiera
+    if lane != "":
+        champion_data = miner.ChampionData(champ.lower(), lineas_validas[lane])
+
+    else:
+        champion_data = miner.ChampionData(champ.lower())
+
+    champ = champion_data.get_champ_name()
+    role = champion_data.get_active_position()
+
     # De este objeto, obtenemos la info de las builds
     build_data = champion_data.builds
+
+    # Y obtenemos también los órdenes de Skill, para más facilidad, los metemos en un diccionario
+    skills_common, skills_winrate = champion_data.arr_skill_order()
+
+    skill_data = {
+        1: skills_common,
+        2: skills_winrate
+    }
+
     if build_data:  # Verificamos que hayamos conseguido los datos
-        markup = discord.Embed(title=f"Items indicados para {champ}", description="Obtenido de Champion.gg")
+        markup = discord.Embed(title=f"Items indicados para {champ} {role}", description="Obtenido de Champion.gg")
+        markup.url = champion_data.url
         markup.set_thumbnail(url=champion_data.get_champ_icon())
 
         for build in build_data:
+            # Arreglamos la lista de items en texto legible para el embed
             itemlist = build_data[build]
             if itemlist:
                 itemlist_markup = '\n'.join(itemlist)
             else:
-                itemlist_markup = 'No hay una build aún para este campeón, intentalo más tarde :('
+                itemlist_markup = 'Aún no hay información suficiente para el campeón, intentalo más tarde :('
 
             # Odio discord.py
             # Los items inline se mostrarán en la misma linea, deben estar juntos
             if build > 2:  # Si vamos por los items iniciales, deben ir inline para que sea más entendible
                 markup.add_field(name=noms[build], value=itemlist_markup, inline=True)
 
-            else:  # Los primeros dos campos no van inline, tienen demasiada info
-                markup.add_field(name=noms[build], value=itemlist_markup, inline=False)
-
                 # Espacio en blanco
+                markup.add_field(name='\u200b', value='\u200b', inline=True)
+
+            else:  # Los primeros dos campos no van inline, tienen demasiada info
+                markup.add_field(name=f"**{noms[build]}**", value="\u200b", inline=False)
+                markup.add_field(name="Items", value=itemlist_markup, inline=True)
+                markup.add_field(name='\u200b', value='\u200b', inline=True)
+
+                """Dado que las skills solo son 2, aprovechamos que esta condicion se hace solo de 1 a 2 en el ciclo,
+                para procesar las skills en texto legible para insertar en un embed"""
+
+                # Organizamos las skills en texto legible para el embed
+                # Necesitamos una lista para cada una de las opciones (Por winrate/Por partidas jugadas)
+                skill_order = skill_data[build]
+
+                # Lista que contendrá el orden de skills condensado
+                processed_skills = []
+
+                prev_skill = skill_order[0]
+                skill_count = 0
+
+                # Ni yo entiendo este ciclo, solo recorro los 18 niveles y le rezo a belcebú
+                for x in range(18):
+
+                    # Si la skill que sigue es igual a la anterior, podemos condensarlo
+                    if skill_order[x] == prev_skill:
+                        skill_count += 1
+
+                    # Si no lo es, entonces simplemente lo agregamos a la lista según que tanto lo hemos condensado
+                    # Yo tampoco entendí eso, tranquilo
+                    else:
+
+                        # Si subimos de seguido la misma skill, le ponemos el número para comprimirlo
+                        # Así no ponemos Q, Q, Q si se sube la Q 3 veces, solo se pone 3xQ
+                        if skill_count > 1:
+                            processed_skills.append(f"{skill_count}x{prev_skill}")
+                            skill_count = 1
+
+                        # Si no es el caso, siempre ponemos un uno
+                        else:
+                            processed_skills.append(f"{1}x{prev_skill}")
+
+                        # De cualquier caso, la skill que se acaba de subir pasa a ser la ultima que se sube
+                        prev_skill = skill_order[x]
+
+                # El final, nos quedan skills colgando, las agregamos a la lista por igual
+                processed_skills.append(f"{skill_count}x{prev_skill}")
+
+                # Agregamos el campo al embed
+                markup.add_field(name="Orden de Skills", value=' ➡ '.join(processed_skills), inline=True)
+
+                # Y por último, ponemos un espacio en blanco al final
                 markup.add_field(name='\u200b', value='\u200b', inline=False)
 
+        # Agregamos detalles y enviamos el embed
         markup.set_footer(text=f'Parche {champion_data.get_patch()}')
         await context.channel.send(content=None, embed=markup)
         print("Información enviada exitosamente")
