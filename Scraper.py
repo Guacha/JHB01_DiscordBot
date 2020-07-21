@@ -356,7 +356,7 @@ class ChampionData:
         }
 
         if rune_name in rune_to_spanish:
-            return rune_to_spanish[rune_name]
+            return rune_name
         else:
             return rune_name
 
