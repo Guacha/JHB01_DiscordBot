@@ -640,10 +640,11 @@ async def get_winrate(context, *args):
                 aliases=['Runas', 'runes', 'Runes', 'RUNAS', 'RUNES'],
                 usage='/runas {campeón}',
                 pass_context=True)
-async def get_runes(context, champ):
+async def get_runes(context, champ, lane=""):
     print('---------------------------------------------------------------------')
     print('Comando de builds')  # Debugging
     print(f'Campeón seleccionado: {champ}')
+    print(f'Rol seleccionado: {champ}')
 
     # Diccionario para hacer cadenas lindas
     noms = {
@@ -651,15 +652,47 @@ async def get_runes(context, champ):
         2: f'Runas con mayor winrate de {champ}'
     }
 
+    # Diccionario para traducir lineas válidas
+    lineas_validas = {
+        'top': 'top',
+        'jungle': 'jungle',
+        'jungla': 'jungle',
+        'mid': 'mid',
+        'medio': 'mid',
+        'middle': 'mid',
+        'bot': 'adc',
+        'adc': 'adc',
+        'carry': 'adc',
+        'sup': 'support',
+        'support': 'support',
+        'soporte': 'support'
+    }
+
+    champ_has_role = True
+
     # Creamos el objeto campeón para buscar la info
-    champion = miner.ChampionData(champ.lower())
+    if lane == "":
+        champion = miner.ChampionData(champ.lower())
+
+    else:
+        champion = miner.ChampionData(champ.lower(), lineas_validas[lane])
+
+    # Obtenemos datos importantes de campeón
     champ = champion.get_champ_name()
+    role = champion.get_active_position()
+
+    if role.lower() == lineas_validas[lane]:
+        champ_has_role = True
+
+    else:
+        champ_has_role = False
+
     # Usamos la funcion de ChampionData para obtener las runas y procesarlas
     runes = champion.runes
 
     # Verificamos si consiguió los datos
     if runes:
-        markup = discord.Embed(title=f"Runas indicadas para {champ}", description="Obtenido de Champion.gg")
+        markup = discord.Embed(title=f"Runas indicadas para {champ} {role}", description="Obtenido de Champion.gg")
         markup.set_thumbnail(url=champion.get_champ_icon())
         for runeset in runes:
             if runeset == 1:
@@ -676,7 +709,13 @@ async def get_runes(context, champ):
             markup.add_field(name='\u200b', value='\u200b', inline=False)
 
         markup.set_footer(text=f'Parche {champion.get_patch()}')
-        await context.channel.send(content=None, embed=markup)
+
+        if champ_has_role:
+            await context.channel.send(content=None, embed=markup)
+
+        else:
+            await context.channel.send("No tengo información de ese campeón en esa línea, pero aquí tienes lo que "
+                                       "encontré", embed=markup)
         print("Información enviada exitosamente")
         print('---------------------------------------------------------------------')
     else:
@@ -732,6 +771,11 @@ async def get_builds(context, champ, lane=""):
 
     champ = champion_data.get_champ_name()
     role = champion_data.get_active_position()
+
+    if role.lower() == lineas_validas[lane]:
+        champ_has_role = True
+    else:
+        champ_has_role = False
 
     # De este objeto, obtenemos la info de las builds
     build_data = champion_data.builds
@@ -818,7 +862,13 @@ async def get_builds(context, champ, lane=""):
 
         # Agregamos detalles y enviamos el embed
         markup.set_footer(text=f'Parche {champion_data.get_patch()}')
-        await context.channel.send(content=None, embed=markup)
+
+        if champ_has_role:
+            await context.channel.send(content=None, embed=markup)
+
+        else:
+            await context.channel.send("No tengo información de ese campeón en esa línea, pero aquí tienes lo que "
+                                       "encontré", embed=markup)
         print("Información enviada exitosamente")
         print('---------------------------------------------------------------------')
     # Si no se consiguieron los datos, hay que avisar que el man es imbécil y escribió algo mal
