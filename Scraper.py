@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import re
-import math
+from datetime import datetime, timedelta
 
 
 class PlayerData:
@@ -28,7 +28,18 @@ class PlayerData:
 
     def get_last_update(self):
         update = self.soup.find('div', class_='LastUpdate').get_text()
-        return update[17:]
+
+        split_date = update[17:-10].split('-')
+
+        update_date = datetime(int(split_date[0]), int(split_date[1]), int(split_date[2]))
+
+        days_ago = divmod((datetime.now() - update_date).total_seconds(), 86400)[0]
+
+        # Es posible que la diferencia sea negativa, por las zonas horarias
+        if days_ago < 0:
+            days_ago += 1
+
+        return f"{update_date.strftime('%x')} (Hace {int(days_ago)} días)"
 
     def get_summoner_rank(self):
         solo_info = self.soup.find('div', class_='SummonerRatingMedium')
@@ -534,5 +545,5 @@ class ChampionData:
 
 
 if __name__ == '__main__':
-    champ = ChampionData('sett')
-    print(champ.get_active_position())
+    player = PlayerData('guacha')
+    print(player.get_last_update())
