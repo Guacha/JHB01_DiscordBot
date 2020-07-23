@@ -657,6 +657,7 @@ async def get_runes(context, champ, lane=""):
         'top': 'top',
         'jungle': 'jungle',
         'jungla': 'jungle',
+        'jg': 'jungle',
         'mid': 'mid',
         'medio': 'mid',
         'middle': 'mid',
@@ -680,12 +681,12 @@ async def get_runes(context, champ, lane=""):
     # Obtenemos datos importantes de campeón
     champ = champion.get_champ_name()
     role = champion.get_active_position()
+    if lane != '' and lane in lineas_validas:
+        if role.lower() == lineas_validas[lane]:
+            champ_has_role = True
 
-    if role.lower() == lineas_validas[lane]:
-        champ_has_role = True
-
-    else:
-        champ_has_role = False
+        else:
+            champ_has_role = False
 
     # Usamos la funcion de ChampionData para obtener las runas y procesarlas
     runes = champion.runes
@@ -710,12 +711,19 @@ async def get_runes(context, champ, lane=""):
 
         markup.set_footer(text=f'Parche {champion.get_patch()}')
 
+        # Si el rol que el usuario eligió si existe
         if champ_has_role:
             await context.channel.send(content=None, embed=markup)
 
+        # Si no existe, puede que el usuario no haya digitado nada, o que no exista ese rol en champion.gg
         else:
-            await context.channel.send("No tengo información de ese campeón en esa línea, pero aquí tienes lo que "
-                                       "encontré", embed=markup)
+            if champ_has_role is not None:
+                await context.channel.send("No tengo información de ese campeón en esa línea, pero aquí tienes lo que "
+                                           "encontré", embed=markup)
+
+            else:
+                await context.channel.send(f"El rol más común que encontré para ese campeón es en {role}", embed=markup)
+
         print("Información enviada exitosamente")
         print('---------------------------------------------------------------------')
     else:
@@ -751,6 +759,7 @@ async def get_builds(context, champ, lane=""):
         'top': 'top',
         'jungle': 'jungle',
         'jungla': 'jungle',
+        'jg': 'jungle',
         'mid': 'mid',
         'medio': 'mid',
         'middle': 'mid',
@@ -772,10 +781,13 @@ async def get_builds(context, champ, lane=""):
     champ = champion_data.get_champ_name()
     role = champion_data.get_active_position()
 
-    if role.lower() == lineas_validas[lane]:
-        champ_has_role = True
-    else:
-        champ_has_role = False
+    # Verificamos si el rol que envió el usuario existe (Si lo mandó con un rol)
+    champ_has_role = None
+    if lane != '' and lane in lineas_validas:
+        if role.lower() == lineas_validas[lane]:
+            champ_has_role = True
+        else:
+            champ_has_role = False
 
     # De este objeto, obtenemos la info de las builds
     build_data = champion_data.builds
@@ -869,6 +881,7 @@ async def get_builds(context, champ, lane=""):
         else:
             await context.channel.send("No tengo información de ese campeón en esa línea, pero aquí tienes lo que "
                                        "encontré", embed=markup)
+
         print("Información enviada exitosamente")
         print('---------------------------------------------------------------------')
     # Si no se consiguieron los datos, hay que avisar que el man es imbécil y escribió algo mal
