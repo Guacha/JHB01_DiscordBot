@@ -113,6 +113,7 @@ async def upd_cont_reset():
                     print('Se borraron los penes')  # Debugging
                     print('---------------------------------------------------------------------')
                     await channel.send("Los penes han sido eliminados @everyone")
+                    break
 
 
 @client.command(name='poll',

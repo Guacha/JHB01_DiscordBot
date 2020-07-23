@@ -63,8 +63,11 @@ class Database:
         """Obtiene el estado actual del contador"""
         cont_act = self.__db.child(guid).child('server-stats').child('reset-timer').get()
 
-        if cont_act.val():
-            return cont_act.val()
+        value = cont_act.val()
+
+        if value is not None:
+            return value
+
         else:  # En caso de que el contador aún no se haya creado en la base de datos
             self.__db.child(guid).child('server-stats').update({'reset-timer': 10079})
             return 10079
