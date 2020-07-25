@@ -531,7 +531,7 @@ class ChampionData:
         self.champion = None
         self.champ_icon = None
         self.patch = None
-        self.url = f"https://champion.gg/champion/{champion}/{lane if lane else ''}"
+        self.url = f"https://champion.gg/champion/{champion.capitalize()}{'/' + lane if lane else ''}"
         html = requests.get(self.url)
         self.structure = BeautifulSoup(html.content, 'html.parser')
         if len(self.structure.find_all('div', class_="large-header")) != 0:
@@ -544,6 +544,6 @@ class ChampionData:
             self.patch = self.get_patch()
 
 
+# Debugging
 if __name__ == '__main__':
-    player = PlayerData('guacha')
-    print(player.get_last_update())
+    pass

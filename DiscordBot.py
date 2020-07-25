@@ -694,7 +694,7 @@ async def get_runes(context, champ, lane=""):
 
     # Verificamos si consiguió los datos
     if runes:
-        markup = discord.Embed(title=f"Runas indicadas para {champ} {role}", description="Obtenido de Champion.gg")
+        markup = discord.Embed(title=f"Runas indicadas para {champ.capitalize()} {role}", description="Obtenido de Champion.gg")
         markup.set_thumbnail(url=champion.get_champ_icon())
         for runeset in runes:
             if runeset == 1:
@@ -802,7 +802,7 @@ async def get_builds(context, champ, lane=""):
     }
 
     if build_data:  # Verificamos que hayamos conseguido los datos
-        markup = discord.Embed(title=f"Items indicados para {champ} {role}", description="Obtenido de Champion.gg")
+        markup = discord.Embed(title=f"Items indicados para {champ.capitalize()} {role}", description="Obtenido de Champion.gg")
         markup.url = champion_data.url
         markup.set_thumbnail(url=champion_data.get_champ_icon())
 
