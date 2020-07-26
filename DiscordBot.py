@@ -758,9 +758,9 @@ async def get_builds(context, champ, lane=None):
         'mid': 'mid',
         'medio': 'mid',
         'middle': 'mid',
-        'bot': 'adc',
-        'adc': 'adc',
-        'carry': 'adc',
+        'bot': 'bot',
+        'adc': 'bot',
+        'carry': 'bot',
         'sup': 'support',
         'support': 'support',
         'soporte': 'support'
