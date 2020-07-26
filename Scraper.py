@@ -544,6 +544,132 @@ class ChampionData:
             self.patch = self.get_patch()
 
 
+class RuneData:
+
+    def __init__(self, champ_name, role=None):
+
+        if role:
+            self.url = f"https://u.gg/lol/champions/{champ_name}/build?role={role}"
+        else:
+            self.url = f"https://u.gg/lol/champions/{champ_name}/build"
+
+        self.data = BeautifulSoup(requests.get(self.url).content, 'html.parser')
+
+        # Verificar que lo que buscamos existe y tiene sentido
+        # Intentamos buscar los datos
+
+        try:
+            # Si funciona bien, tendremos un objeto con todos los datos correctamente
+            self.rune_data = self.get_runes()
+            self.champ_name = self.get_champion_name()
+            self.role = self.get_role()
+            self.icon = self.get_champion_icon()
+            self.patch = self.get_current_patch()
+            self.total_matches = self.get_total_games()
+            self.winrate = self.get_runeset_winrate()
+            self.runeset_games = self.get_runeset_games()
+            self.low_sample_rate = self.check_low_sample_rate()
+
+        # Si no funciona (Campeón o rol incorrecto) obtendremos un NoneType, por lo cual nuestro objeto no servirá
+        except AttributeError:
+            self.rune_data = None
+            print("Error durante la búsqueda de datos")
+
+    def get_runes(self):
+
+        # Obtenemos el divisor principal que contiene las runas
+        rune_container = self.data.find('div', class_='grid-block runes')
+
+        recommended_runes = []
+
+        # Obtenemos el contenedor de los árboles de runas principal, secundario, y los shards
+        rune_data = rune_container.find('div', class_='rune-trees-container')
+
+        # Revisamos todas las ramas en el árbol
+        for rune_tree in rune_data.find_all('div', class_='path-runes'):
+
+            # Guardamos el nombre del árbol (Dominación, precisión, etc)
+            chosen_path = rune_tree.find('div', class_='path-main').div.get_text()
+
+            # Lista que contendrá las selecciones en el árbol
+            runes_in_path = []
+
+            # Buscamos entre las selecciones de la rama
+            for rune in rune_tree.find_all('div', class_='perk perk-active'):
+                runes_in_path.append(rune.img['alt'])
+
+            # Metemos una tupla que contiene el nombre de la rama y las runas en la rama
+            recommended_runes.append((chosen_path, runes_in_path))
+
+        # Por último, debemos meter los fragmentos de runa en la lista
+
+        # Necesitamos un diccionario para traducir imágenes a Texto de runas
+
+        fragmentos_texto = {
+            'AdaptiveForce': 'Fuerza Adaptiva',
+            'AttackSpeed': 'Velocidad de Ataque',
+            'CDRScaling': 'Reducción de Enfriamiento',
+            'Armor': 'Armadura',
+            'HealthScaling': 'Vida por Nivel',
+            'MagicRes': 'Resistencia mágica'
+        }
+
+        # Lista que contendrá los fragmentos
+        frags = []
+
+        for shard in rune_data.find_all('div', class_='shard shard-active'):
+            for key in fragmentos_texto:
+                if key in shard.img['src']:
+                    frags.append(fragmentos_texto[key])
+                    break
+
+        recommended_runes.append(('Fragmentos', frags))
+
+        return recommended_runes
+
+    def get_champion_name(self):
+        name_holder = self.data.find('span', class_='champion-name')
+        return name_holder.get_text()
+
+    def get_role(self):
+        role_holder = self.data.find('span', class_='champion-title')
+        position = role_holder.get_text().split()[-1]
+        return position
+
+    def get_champion_icon(self):
+        img_holder = self.data.find('img', class_='champion-image')
+        return img_holder['src']
+
+    def get_current_patch(self):
+        patch_holder = self.data.find('span', class_='Select-value-label')
+
+        return patch_holder.get_text()
+
+    def get_total_games(self):
+        match_holder = self.data.find('div', class_='matches')
+        value = int(match_holder.div.get_text().replace(',', ''))
+        return value
+
+    def get_runeset_winrate(self):
+        header = self.data.find('div', class_='grid-block runes').div
+        percentage = header.find('span', class_='percentage').get_text()[:-1]
+
+        return percentage
+
+    def get_runeset_games(self):
+        header = self.data.find('div', class_='grid-block runes').div
+        games = header.find_all('span')[-1].get_text()
+
+        game_num = games.split(' ')[0][1:]
+        return game_num
+
+    def check_low_sample_rate(self):
+        warnings = self.data.find_all('div', class_='ugg-alert')
+
+        return len(warnings) > 0
+
+
 # Debugging
 if __name__ == '__main__':
-    pass
+    runes = RuneData('kennen', role='top')
+    print(runes.low_sample_rate)

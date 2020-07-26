@@ -116,6 +116,16 @@ async def upd_cont_reset():
                     break
 
 
+@client.command(name='anuncioAdmin', hidden=True, pass_context=True)
+async def anuncio_master(ctx, type, *args):
+    if ctx.author.id == 301155670793781248:  # UUID De Guacha
+        embed = discord.Embed(title=type.capitalize(), description=' '.join(args))
+        await ctx.message.delete()
+        await ctx.send("Un Anuncio importante con respecto al bot @everyone!", embed=embed)
+
+    else:
+        print(f"Usuario inválido usó comando admin: {ctx.author.id}")
+
 @client.command(name='poll',
                 description='Comando para generar una encuesta en el servidor',
                 brief='Genera una encuesta!',
@@ -641,17 +651,11 @@ async def get_winrate(context, *args):
                 aliases=['Runas', 'runes', 'Runes', 'RUNAS', 'RUNES'],
                 usage='/runas {campeón}',
                 pass_context=True)
-async def get_runes(context, champ, lane=""):
+async def get_runes(context, champ, lane=None):
     print('---------------------------------------------------------------------')
     print('Comando de builds')  # Debugging
     print(f'Campeón seleccionado: {champ}')
-    print(f'Rol seleccionado: {champ}')
-
-    # Diccionario para hacer cadenas lindas
-    noms = {
-        1: f'Runas más comunes de {champ}',
-        2: f'Runas con mayor winrate de {champ}'
-    }
+    print(f"Rol seleccionado: {lane if lane else 'Ninguno'}")
 
     # Diccionario para traducir lineas válidas
     lineas_validas = {
@@ -659,9 +663,9 @@ async def get_runes(context, champ, lane=""):
         'jungle': 'jungle',
         'jungla': 'jungle',
         'jg': 'jungle',
-        'mid': 'mid',
-        'medio': 'mid',
-        'middle': 'mid',
+        'mid': 'middle',
+        'medio': 'middle',
+        'middle': 'middle',
         'bot': 'adc',
         'adc': 'adc',
         'carry': 'adc',
@@ -670,65 +674,62 @@ async def get_runes(context, champ, lane=""):
         'soporte': 'support'
     }
 
-    champ_has_role = True
-
     # Creamos el objeto campeón para buscar la info
-    if lane == "":
-        champion = miner.ChampionData(champ.lower())
+    if lane is None:
+        champion = miner.RuneData(champ.lower())
 
     else:
-        champion = miner.ChampionData(champ.lower(), lineas_validas[lane])
+        champion = miner.RuneData(champ.lower(), lineas_validas[lane])
 
-    # Obtenemos datos importantes de campeón
-    champ = champion.get_champ_name()
-    role = champion.get_active_position()
-    if lane != '' and lane in lineas_validas:
-        if role.lower() == lineas_validas[lane]:
-            champ_has_role = True
-
-        else:
-            champ_has_role = False
-
-    # Usamos la funcion de ChampionData para obtener las runas y procesarlas
-    runes = champion.runes
+    # Usamos la funcion de RuneData para obtener las runas y procesarlas
+    runes = champion.rune_data
 
     # Verificamos si consiguió los datos
     if runes:
-        markup = discord.Embed(title=f"Runas indicadas para {champ.capitalize()} {role}", description="Obtenido de Champion.gg")
-        markup.set_thumbnail(url=champion.get_champ_icon())
-        for runeset in runes:
-            if runeset == 1:
-                markup.add_field(name=noms[1], value="-------------------------------------", inline=False)
-            else:
-                markup.add_field(name=noms[2], value=" ------------------------------------", inline=False)
-            tree = runes[runeset]
-            for path in tree:
-                path_title = path[0]
-                selecciones = '\n'.join(path[1])
-                markup.add_field(name=path_title, value=selecciones, inline=True)
 
-            # Espacio en blanco
-            markup.add_field(name='\u200b', value='\u200b', inline=False)
+        # Obtenemos datos importantes de campeón
+        champ_name = champion.champ_name
+        role = champion.role
+        total_games = champion.total_matches
+        played_games = champion.runeset_games
+        wr = champion.winrate
 
-        markup.set_footer(text=f'Parche {champion.get_patch()}')
+        # Creamos el embed con la información válida
+        markup = discord.Embed(title=f"Runas indicadas para {champ_name} {role}", description="Obtenido de U.GG")
+        markup.set_thumbnail(url=champion.icon)
 
-        # Si el rol que el usuario eligió si existe
-        if champ_has_role:
-            await context.channel.send(content=None, embed=markup)
+        # Revisamos si hay advertencia de pocas partidas
+        if champion.low_sample_rate:
+            markup.add_field(name=':warning:', value=f"Actualmente hay muy poca gente jugando {champ_name} en esa "
+                                                     f"posición, Es posible que los datos calculados no sean los "
+                                                     f"idóneos", inline=False)
 
-        # Si no existe, puede que el usuario no haya digitado nada, o que no exista ese rol en champion.gg
+        # Insertamos campos que servirán de título para los árboles de runas
+        markup.add_field(name='Principal', value=runes[0][0])
+        markup.add_field(name='Secundaria', value=runes[1][0])
+        markup.add_field(name='\u200b', value='\u200b')
+
+        markup.add_field(name=runes[0][1][0], value='\n'.join(runes[0][1][1:]))
+        markup.add_field(name='Selección secundaria', value='\n'.join(runes[1][1]))
+        markup.add_field(name='Selección terciaria', value='\n'.join(runes[2][1]))
+
+        markup.set_footer(text=f'Parche {champion.patch}, Winrate: {wr} (en {played_games} partidas)')
+
+        # Si el usuario no ingresó un rol
+        if lane is None:
+            await context.channel.send(f"El rol más común que encontré para {champ_name} es en {role}, he creado un "
+                                       f"conjunto de runas ideal para ti después de revisar {total_games} partidas!",
+                                       embed=markup)
+
         else:
-            if champ_has_role is not None:
-                await context.channel.send("No tengo información de ese campeón en esa línea, pero aquí tienes lo que "
-                                           "encontré", embed=markup)
-
-            else:
-                await context.channel.send(f"El rol más común que encontré para ese campeón es en {role}", embed=markup)
+            await context.channel.send(f"He creado un conjunto de runas ideal para ti después de revisar {total_games}"
+                                       f" partidas!", embed=markup)
 
         print("Información enviada exitosamente")
         print('---------------------------------------------------------------------')
     else:
-        await context.channel.send("Buena imbécil, escribiste mal el nombre del campeón, aprende a escribir")
+        await context.channel.send(f"Buena imbécil, escribiste mal algo, aprende a escribir "
+                                   f"{context.message.author.mention}")
         print("Campeón no existe")
         print('---------------------------------------------------------------------')
 
@@ -1262,7 +1263,8 @@ def get_token(particiones):
     return token
 
 
-TOKEN = get_token(3)
-upd_cont_reset.start()
+if __name__ == '__main__':
+    TOKEN = get_token(3)
+    upd_cont_reset.start()
 
-client.run(TOKEN)
+    client.run(TOKEN)
