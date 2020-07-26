@@ -126,6 +126,7 @@ async def anuncio_master(ctx, type, *args):
     else:
         print(f"Usuario inválido usó comando admin: {ctx.author.id}")
 
+
 @client.command(name='poll',
                 description='Comando para generar una encuesta en el servidor',
                 brief='Genera una encuesta!',
@@ -740,21 +741,13 @@ async def get_runes(context, champ, lane=None):
                 aliases=['Build', 'builds', 'BUILD', 'Builds', 'BUILDS'],
                 usage='/build {campeón}',
                 pass_context=True)
-async def get_builds(context, champ, lane=""):
+async def get_builds(context, champ, lane=None):
     """Con esta funcion se obtienen las builds del scraper, y se entregan al usuario"""
 
     print('---------------------------------------------------------------------')
     print('Comando de builds')  # Debugging
     print(f'Campeón seleccionado: {champ}')
     print(f'Rol seleccionado: {lane}')
-
-    # Tenemos un diccionario para relacionar cada build a un título y una cadena bien formada
-    noms = {
-        1: f'Build completa más común de {champ}',
-        2: f'Build completa con mayor winrate de {champ}',
-        3: f'Iniciales más comunes de {champ}',
-        4: f'Iniciales con mayor winrate de {champ}'
-    }
 
     # Diccionario para traducir lineas válidas
     lineas_validas = {
@@ -774,118 +767,78 @@ async def get_builds(context, champ, lane=""):
     }
 
     # Creamos el objeto que contiene los datos del champ que se requiera
-    if lane != "":
-        champion_data = miner.ChampionData(champ.lower(), lineas_validas[lane])
+    if lane is not None:
+        champion_data = miner.BuildData(champ.lower(), lineas_validas[lane])
 
     else:
-        champion_data = miner.ChampionData(champ.lower())
-
-    champ = champion_data.get_champ_name()
-    role = champion_data.get_active_position()
-
-    # Verificamos si el rol que envió el usuario existe (Si lo mandó con un rol)
-    champ_has_role = None
-    if lane != '' and lane in lineas_validas:
-        if role.lower() == lineas_validas[lane]:
-            champ_has_role = True
-        else:
-            champ_has_role = False
+        champion_data = miner.BuildData(champ.lower())
 
     # De este objeto, obtenemos la info de las builds
-    build_data = champion_data.builds
+    starter = champion_data.starter_items
+    core = champion_data.core_items
+    boots = champion_data.boots
 
-    # Y obtenemos también los órdenes de Skill, para más facilidad, los metemos en un diccionario
-    skills_common, skills_winrate = champion_data.arr_skill_order()
-
-    skill_data = {
-        1: skills_common,
-        2: skills_winrate
-    }
-
-    if build_data:  # Verificamos que hayamos conseguido los datos
-        markup = discord.Embed(title=f"Items indicados para {champ.capitalize()} {role}", description="Obtenido de Champion.gg")
+    if starter is not None and core is not None and boots is not None:  # Verificamos que hayamos conseguido los datos
+        champ_name = champion_data.champ_name
+        role = champion_data.role
+        markup = discord.Embed(title=f"Items indicados para {champ_name} {role}",
+                               description="Obtenido de Riot KR database by OP.GG"
+                               )
         markup.url = champion_data.url
-        markup.set_thumbnail(url=champion_data.get_champ_icon())
+        markup.set_thumbnail(url=champion_data.icon)
 
-        for build in build_data:
-            # Arreglamos la lista de items en texto legible para el embed
-            itemlist = build_data[build]
-            if itemlist:
-                itemlist_markup = '\n'.join(itemlist)
-            else:
-                itemlist_markup = 'Aún no hay información suficiente para el campeón, intentalo más tarde :('
+        # Agregamos los campos de items iniciales
+        markup.add_field(name="Items iniciales",
+                         value=f"Aquí tienes varias opciones de items iniciales para {champ_name}",
+                         inline=False)
+        cont = 1
+        for item_data in starter:
+            # Cada dataset tiene una lista con los items, una cadena con el PR% y una cadena con el WR%
+            markup.add_field(name=f"Set {cont} ({item_data[1]}% Pickrate - {item_data[2]}% Winrate)",
+                             value='\n\t:arrow_down:\n'.join(item_data[0]))
 
-            # Odio discord.py
-            # Los items inline se mostrarán en la misma linea, deben estar juntos
-            if build > 2:  # Si vamos por los items iniciales, deben ir inline para que sea más entendible
-                markup.add_field(name=noms[build], value=itemlist_markup, inline=True)
+            cont += 1
 
-                # Espacio en blanco
-                markup.add_field(name='\u200b', value='\u200b', inline=True)
+        # Whitespace spacer for next item sets
+        markup.add_field(name="\u200b", value="\u200b", inline=False)
 
-            else:  # Los primeros dos campos no van inline, tienen demasiada info
-                markup.add_field(name=f"**{noms[build]}**", value="\u200b", inline=False)
-                markup.add_field(name="Items", value=itemlist_markup, inline=True)
-                markup.add_field(name='\u200b', value='\u200b', inline=True)
+        # Agregamos los campos de items core
+        markup.add_field(name="Core Builds",
+                         value=f"Aquí tienes las core builds más comunes para {champ_name} {role}",
+                         inline=False)
 
-                """Dado que las skills solo son 2, aprovechamos que esta condicion se hace solo de 1 a 2 en el ciclo,
-                para procesar las skills en texto legible para insertar en un embed"""
+        cont = 1
+        for item_data in core:
+            # Cada dataset tiene una lista con los items, una cadena con el PR% y una cadena con el WR%
+            markup.add_field(name=f"Set {cont} ({item_data[1]}% Pickrate - {item_data[2]}% Winrate)",
+                             value='\n\t:arrow_down:     \n'.join(item_data[0]))
 
-                # Organizamos las skills en texto legible para el embed
-                # Necesitamos una lista para cada una de las opciones (Por winrate/Por partidas jugadas)
-                skill_order = skill_data[build]
+            cont += 1
 
-                # Lista que contendrá el orden de skills condensado
-                processed_skills = []
+        # Whitespace spacer for next item sets
+        markup.add_field(name="\u200b", value="\u200b", inline=False)
 
-                prev_skill = skill_order[0]
-                skill_count = 0
+        # Agregamos los campos de botas
+        markup.add_field(name="Botas",
+                         value=f"Aquí tienes opciones de botas comunes para {champ_name} {role}",
+                         inline=False)
 
-                # Ni yo entiendo este ciclo, solo recorro los 18 niveles y le rezo a belcebú
-                for x in range(18):
+        cont = 1
+        for item_data in boots:
+            # Cada dataset tiene una lista con los items, una cadena con el PR% y una cadena con el WR%
+            markup.add_field(name=f"Set {cont} ({item_data[1]}% Pickrate - {item_data[2]}% Winrate)",
+                             value=item_data[0])
 
-                    # Si la skill que sigue es igual a la anterior, podemos condensarlo
-                    if skill_order[x] == prev_skill:
-                        skill_count += 1
-
-                    # Si no lo es, entonces simplemente lo agregamos a la lista según que tanto lo hemos condensado
-                    # Yo tampoco entendí eso, tranquilo
-                    else:
-
-                        # Si subimos de seguido la misma skill, le ponemos el número para comprimirlo
-                        # Así no ponemos Q, Q, Q si se sube la Q 3 veces, solo se pone 3xQ
-                        if skill_count > 1:
-                            processed_skills.append(f"{skill_count}x{prev_skill}")
-                            skill_count = 1
-
-                        # Si no es el caso, siempre ponemos un uno
-                        else:
-                            processed_skills.append(f"{1}x{prev_skill}")
-
-                        # De cualquier caso, la skill que se acaba de subir pasa a ser la ultima que se sube
-                        prev_skill = skill_order[x]
-
-                # El final, nos quedan skills colgando, las agregamos a la lista por igual
-                processed_skills.append(f"{skill_count}x{prev_skill}")
-
-                # Agregamos el campo al embed
-                markup.add_field(name="Orden de Skills", value=' ➡ '.join(processed_skills), inline=True)
-
-                # Y por último, ponemos un espacio en blanco al final
-                markup.add_field(name='\u200b', value='\u200b', inline=False)
+            cont += 1
 
         # Agregamos detalles y enviamos el embed
-        markup.set_footer(text=f'Parche {champion_data.get_patch()}')
+        markup.set_footer(text=f'Parche {champion_data.patch}')
 
-        if champ_has_role:
-            await context.channel.send(content=None, embed=markup)
-
-        else:
-            await context.channel.send("No tengo información de ese campeón en esa línea, pero aquí tienes lo que "
-                                       "encontré", embed=markup)
+        await context.send(embed=markup)
 
         print("Información enviada exitosamente")
         print('---------------------------------------------------------------------')
+
     # Si no se consiguieron los datos, hay que avisar que el man es imbécil y escribió algo mal
     else:
         await context.channel.send("Buena imbécil, escribiste mal el nombre del campeón, aprende a escribir")

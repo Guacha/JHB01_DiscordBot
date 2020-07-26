@@ -669,7 +669,159 @@ class RuneData:
         return len(warnings) > 0
 
 
+class BuildData:
+
+    def __init__(self, champ_name, role=None):
+
+        if role:
+            self.url = f"https://lan.op.gg/champion/{champ_name}/statistics/{role}/item"
+        else:
+            self.url = f"https://lan.op.gg/champion/{champ_name}/statistics/redirection/item"
+
+        self.data = BeautifulSoup(requests.get(self.url).content, 'html.parser')
+
+        # Verificar que lo que buscamos existe y tiene sentido
+        # Intentamos buscar los datos
+
+        try:
+            # Si funciona bien, tendremos un objeto con todos los datos correctamente
+            self.champ_name = self.get_champion_name()
+            self.role = self.get_role()
+            self.icon = self.get_champion_icon()
+            self.patch = self.get_current_patch()
+            self.starter_items = self.get_starting_item_data()
+            self.core_items = self.get_core_item_data()
+            self.boots = self.get_boots_data()
+
+        # Si no funciona (Campeón o rol incorrecto) obtendremos un NoneType, por lo cual nuestro objeto no servirá
+        except AttributeError:
+
+            self.starter_items = None
+            self.core_items = None
+            self.boots = None
+            print("Error durante la búsqueda de datos")
+
+    def get_starting_item_data(self):
+
+        starting_item_container = self.data.find_all('div', class_='champion-box')[2].div
+
+        # Lista que contendrá la información de las builds
+        starter_builds = []
+        """La lista estará formateada en elementos de truplas (thruples) tal que la primera posición será una lista, 
+        la segunda una cadena (Pickrate%) y la tercera una cadena (Winrate%)"""
+
+        for item_row in starting_item_container.find('tbody').find_all('tr')[:3]:
+            item_list = item_row.td.ul
+            build_items = []
+
+            for item in item_list.find_all('li'):
+
+                # Asumimos que el objeto es un item
+                try:
+                    build_items.append(self.find_item_in_string(item['title']))
+
+                # De lo contrario, continuamos
+                except KeyError:
+                    continue
+
+            # Hallamos y parseamos el pickrate y el winrate
+            pickrate = item_row.find_all('td')[1].get_text().strip().split('%')[0]
+            winrate = item_row.find_all('td')[2].get_text().strip().split('%')[0]
+
+            starter_builds.append((build_items, pickrate, winrate))
+
+        return starter_builds
+
+    def get_core_item_data(self):
+        core_item_container = self.data.find_all('div', class_='champion-box')[0].div
+
+        # Lista que contendrá la información de las builds
+        core_builds = []
+        """La lista estará formateada en elementos de truplas (thruples) tal que la primera posición será una lista, 
+        la segunda una cadena (Pickrate%) y la tercera una cadena (Winrate%)"""
+
+        for item_row in core_item_container.find('tbody').find_all('tr')[:3]:
+            item_list = item_row.td.ul
+            build_items = []
+
+            for item in item_list.find_all('li'):
+
+                # Asumimos que el objeto es un item
+                try:
+                    build_items.append(self.find_item_in_string(item['title']))
+
+                # De lo contrario, continuamos
+                except KeyError:
+                    continue
+
+            # Hallamos y parseamos el pickrate y el winrate
+            pickrate = item_row.find_all('td')[1].get_text().strip().split('%')[0]
+            winrate = item_row.find_all('td')[2].get_text().strip().split('%')[0]
+
+            core_builds.append((build_items, pickrate, winrate))
+
+        return core_builds
+
+    def get_champion_name(self):
+        name_holder = self.data.find('h1', class_='champion-stats-header-info__name')
+        return name_holder.get_text()
+
+    def get_role(self):
+        role_holder = self.data.find('li',
+                                     class_='champion-stats-header__position champion-stats-header__position--active'
+                                     )
+
+        position = role_holder.find('span', class_='champion-stats-header__position__role').get_text()
+        return position
+
+    def get_champion_icon(self):
+        img_holder = self.data.find('div', class_='champion-stats-header-info__image')
+        return 'https:' + img_holder.img['src']
+
+    def get_current_patch(self):
+        patch_holder = self.data.find('div', class_='champion-stats-header-version')
+
+        patch_data = patch_holder.get_text().strip()
+
+        patch_number = patch_data.split(" : ")[-1]
+
+        return patch_number
+
+    def find_item_in_string(self, text):
+        """En OP.GG los items están super convolucionados en una cadena larguísima con un montón de tags HTML que no
+        sirven ni para lavarse el qlo, así que debemos hallar el nombre del item entre el desastre :V"""
+
+        try:
+            item_name = re.search('>([^<>+:]+?)<', text).group(1)
+
+        except AttributeError:
+            item_name = None
+
+        return item_name
+
+    def get_boots_data(self):
+        boot_item_container = self.data.find_all('div', class_='champion-box')[1].div
+
+        # Lista que contendrá la información de las builds
+        boot_options = []
+        """La lista estará formateada en elementos de truplas (thruples) tal que la primera posición será una lista, 
+        la segunda una cadena (Pickrate%) y la tercera una cadena (Winrate%)"""
+
+        for item_row in boot_item_container.find('tbody').find_all('tr')[:3]:
+
+            boot = item_row.td.div.span.get_text()
+
+            # Hallamos y parseamos el pickrate y el winrate
+            pickrate = item_row.find_all('td')[1].get_text().strip().split('%')[0]
+            winrate = item_row.find_all('td')[2].get_text().strip().split('%')[0]
+
+            boot_options.append((boot, pickrate, winrate))
+
+        return boot_options
+
+
 # Debugging
 if __name__ == '__main__':
-    runes = RuneData('kennen', role='top')
-    print(runes.low_sample_rate)
+    runes = BuildData('senna')
+    print(runes.boots)
+
