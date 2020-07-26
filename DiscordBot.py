@@ -599,9 +599,9 @@ async def get_winrate(context, *args):
         'mid': 'mid',
         'medio': 'mid',
         'middle': 'mid',
-        'bot': 'adc',
-        'adc': 'adc',
-        'carry': 'adc',
+        'bot': 'bot',
+        'adc': 'bot',
+        'carry': 'bot',
         'sup': 'support',
         'support': 'support',
         'soporte': 'support'
