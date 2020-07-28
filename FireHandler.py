@@ -131,3 +131,13 @@ class Database:
 
         return max_uuid, max_tam
 
+    def register_playlist(self, guid, uuid, playlist_name, playlist_link):
+        self.__db.child(guid).child('user-stats').child(uuid).child('playlists').update({playlist_name: playlist_link})
+
+
+if __name__ == '__main__':
+    db = Database()
+    db.register_playlist(393917904506191872, 301155670793781248, "Música Otaka para no bañarse", "Penecito")
+
+
+
