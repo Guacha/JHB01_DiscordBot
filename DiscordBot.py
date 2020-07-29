@@ -3,6 +3,7 @@ import random
 import discord
 import math
 import Scraper as miner
+import asyncio
 
 from FireHandler import Database
 from discord.ext.commands import Bot
@@ -18,6 +19,8 @@ client.remove_command('help')
 database = Database()
 
 ansiados = {}
+
+playlist_requests = {}
 
 
 def eliminar_penes():
@@ -139,10 +142,10 @@ async def poll(ctx, type, title, *args):
     print('Comando poll')  # Debugging
 
     # Solo el admin debería poder usar las encuestas, luego nececitamos el UUID del admin
-    admin_uuid, _ = database.get_pene_mayor(ctx.guild.id)
+    admins = database.get_admins(ctx.guild.id)
 
     # Verificamos que el admin sea quien usó el comando
-    if int(admin_uuid) == ctx.author.id:
+    if str(ctx.author.id) in admins:
 
         if type.lower() == 'yn' or type.lower() == 'sn':
             embed = discord.Embed(title=title)
@@ -159,8 +162,14 @@ async def poll(ctx, type, title, *args):
             print(f'Título de la encuesta: {title}')
 
     else:  # Para los plebeyos
-        admin = await client.fetch_user(admin_uuid)
-        await ctx.channel.send(f"No eres admin, tu pene es inferior al de {admin.mention}")
+        admin_embed = discord.Embed(title="Admins del servidor", description=f"Para ser admin, debes tener el pene más "
+                                                                             f"grande del servidor")
+
+        for admin in admins:
+            admin_user = await client.fetch_user(admin)
+            admin_embed.add_field(name=admin_user.mention, value="\u200b", inline=False)
+        await ctx.send(f"No eres admin, tu pene es inferior", embed=admin_embed)
+        print(f"Encuesta no creada: {ctx.author} no es admin")
 
     print('---------------------------------------------------------------------')
 
@@ -1043,28 +1052,35 @@ async def penecito(context):
 async def anuncio(context, *args):
     """Comando para poder enviar anuncios, solo la persona con el pene más grande los puede enviar"""
 
-    # Obtenemos el UUID de la persona con el pene más grande (el admin)
-    admin_uuid, _ = database.get_pene_mayor(context.guild.id)
-    admin_user = await client.fetch_user(admin_uuid)
+    # Obtenemos los UUID de las personas con el pene más grande (el admin)
+    admins = database.get_admins(context.guild.id)
 
     # Obtenemos el primer canal de la lista de canales de texto
     channel = context.guild.text_channels[0]
 
+    # Debugging
+    print('---------------------------------------------------------------------')
+    print(f'Anuncio con información: {anuncio}')
+    print(f"Usuario que lo pide: {context.author}")
+
     # Verificamos si el UUID del autor del comando es igual al del que deberia ser admin
-    if context.author.id == int(admin_uuid):
+    if str(context.author.id) in admins:
         await context.message.delete()
         msg = ' '.join(args)
-        markup = discord.Embed(title=msg, color=admin_user.colour)
-        print('---------------------------------------------------------------------')
-        print(f'Anuncio con información: {anuncio}')
+        markup = discord.Embed(title=msg)
 
-        await channel.send(f'SU ADMIN, {admin_user.mention}, HA HABLADO @everyone!', embed=markup)
+        await channel.send(f'SU ADMIN, {context.author.mention}, HA HABLADO @everyone!', embed=markup)
 
-        print('---------------------------------------------------------------------')
     else:
+        admin_embed = discord.Embed(title="Admins del servidor", description=f"Para ser admin, debes tener el pene más "
+                                                                             f"grande del servidor")
+        admin_embed.add_field(name="Admins del servidor", value="\u200b")
+        for admin in admins:
+            admin_user = await client.fetch_user(admin)
+            admin_embed.add_field(name=admin_user.name, value="\u200b", inline=False)
+        await channel.send(f"No eres admin, tu pene es inferior", embed=admin_embed)
 
-        await channel.send(f"No eres admin, tu pene es inferior al de {admin_user.mention}")
-
+    print('---------------------------------------------------------------------')
 
 # Manejo de errores
 @eu.error

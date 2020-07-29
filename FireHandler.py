@@ -123,21 +123,24 @@ class Database:
         penes = self.get_all_penes(guid)
 
         max_tam = -1
-        max_uuid = -1
         for uuid in penes:
             if penes[uuid] > max_tam:
                 max_tam = penes[uuid]
-                max_uuid = uuid
 
-        return max_uuid, max_tam
+        return max_tam
 
-    def register_playlist(self, guid, uuid, playlist_name, playlist_link):
-        self.__db.child(guid).child('user-stats').child(uuid).child('playlists').update({playlist_name: playlist_link})
+    def get_admins(self, guid):
+        admin_ids = []
+        max_tam = self.get_pene_mayor(guid)
+
+        penes = self.get_all_penes(guid)
+
+        for pene in penes:
+            if penes[pene] == max_tam:
+                admin_ids.append(pene)
+
+        return admin_ids
 
 
 if __name__ == '__main__':
     db = Database()
-    db.register_playlist(393917904506191872, 301155670793781248, "Música Otaka para no bañarse", "Penecito")
-
-
-
