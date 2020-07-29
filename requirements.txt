@@ -3,4 +3,3 @@ requests
 discord
 python-dotenv
 pyrebase4
-PyNaCl
