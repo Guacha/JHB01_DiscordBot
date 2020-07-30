@@ -1,9 +1,6 @@
 import pyrebase
 from dotenv import load_dotenv
 import os
-
-from gcloud.datastore import Key
-
 from Economia import Item
 
 load_dotenv()
