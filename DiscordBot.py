@@ -3,7 +3,7 @@ import random
 import discord
 import math
 import Scraper as miner
-import asyncio
+import Economia
 
 from FireHandler import Database
 from discord.ext.commands import Bot
@@ -16,107 +16,170 @@ PREFIX = '/'  # Prefijo para los comandos del bot
 
 client = Bot(command_prefix=PREFIX)  # Crear cliente de bot con el prefijo dado
 client.remove_command('help')
+print('---------------------------------------------------------------------')
+print("Inicializando módulo: Pyrebase Database administrator...")
 database = Database()
+print("Módulo: Pyrebase Database administrator Inicializado con éxito")
+print('---------------------------------------------------------------------')
+print('---------------------------------------------------------------------')
+print("Inicializando módulo: Penetienda...")
+tienda = Economia.Tienda()
+print("Módulo: Penetienda Inicializado con éxito")
+print('---------------------------------------------------------------------')
+
 
 ansiados = {}
 
-playlist_requests = {}
+compras_actuales = {}
 
 
-def eliminar_penes():
-    database.reset_all(393917904506191872)
+def eliminar_penes(guild_id):
+    database.reset_all(guild_id)
 
 
-@tasks.loop(minutes=1)
+@tasks.loop(seconds=5)
 async def upd_cont_reset():
     """Esta función actualiza el contador de penes cada minuto que pasa, y realiza ciertos eventos cuando el tiempo
     pasa ciertos límites, esto es supremamente ineficiente y debe mejorar, pero está programado a las 3:35 am y ahora
     no tengo ni el tiempo ni la energía para terminar esto"""
-    database.reset_countdown(393917904506191872)
-    mins = database.get_reset_timer(393917904506191872)  # Actualmente la ID es única, pero esto debe cambiar
+    for guild in client.guilds:
+        database.reset_countdown(guild.id)
+        mins = database.get_reset_timer(guild.id)  # Actualmente la ID es única, pero esto debe cambiar
 
-    if mins == 1440:  # 1440/60 == 24
-        # Iteramos entre todos los canales que tenga disponible el bot
-        for channel in client.get_all_channels():
+        if mins == 1440:  # 1440/60 == 24
+            # Iteramos entre todos los canales que tenga disponible el bot
+            for channel in guild.channels:
 
-            # Revisamos si cada canal es un canal de texto
-            if isinstance(channel, discord.TextChannel):
+                # Revisamos si cada canal es un canal de texto
+                if isinstance(channel, discord.TextChannel):
 
-                # Si lo es, revisamos si tiene el nombre requerido
-                if channel.name == 'general':
-                    await channel.send("Queda 1 día para el reinicio de los penes!")
+                    # Si lo es, revisamos si tiene el nombre requerido
+                    if channel.name == 'general':
+                        await channel.send("Queda 1 día para el reinicio de los penes!")
 
-    elif mins == 720:  # 720/60 == 12
-        # Iteramos entre todos los canales que tenga disponible el bot
-        for channel in client.get_all_channels():
+        elif mins == 720:  # 720/60 == 12
+            # Iteramos entre todos los canales que tenga disponible el bot
+            for channel in guild.channels:
 
-            # Revisamos si cada canal es un canal de texto
-            if isinstance(channel, discord.TextChannel):
+                # Revisamos si cada canal es un canal de texto
+                if isinstance(channel, discord.TextChannel):
 
-                # Si lo es, revisamos si tiene el nombre requerido
-                if channel.name == 'general':
-                    await channel.send("Quedan 12 horas para el reinicio de los penes, @everyone")
+                    # Si lo es, revisamos si tiene el nombre requerido
+                    if channel.name == 'general':
+                        await channel.send("Quedan 12 horas para el reinicio de los penes, @everyone")
 
-    elif mins == 360:  # 360/60 == 6
-        # Iteramos entre todos los canales que tenga disponible el bot
-        for channel in client.get_all_channels():
+        elif mins == 360:  # 360/60 == 6
+            # Iteramos entre todos los canales que tenga disponible el bot
+            for channel in guild.channels:
 
-            # Revisamos si cada canal es un canal de texto
-            if isinstance(channel, discord.TextChannel):
+                # Revisamos si cada canal es un canal de texto
+                if isinstance(channel, discord.TextChannel):
 
-                # Si lo es, revisamos si tiene el nombre requerido
-                if channel.name == 'general':
-                    await channel.send("Quedan 6 horas para el reinicio de los penes!")
+                    # Si lo es, revisamos si tiene el nombre requerido
+                    if channel.name == 'general':
+                        await channel.send("Quedan 6 horas para el reinicio de los penes!")
 
-    elif mins == 180:  # 180/60 == 3
-        # Iteramos entre todos los canales que tenga disponible el bot
-        for channel in client.get_all_channels():
+        elif mins == 180:  # 180/60 == 3
+            # Iteramos entre todos los canales que tenga disponible el bot
+            for channel in guild.channels:
 
-            # Revisamos si cada canal es un canal de texto
-            if isinstance(channel, discord.TextChannel):
+                # Revisamos si cada canal es un canal de texto
+                if isinstance(channel, discord.TextChannel):
 
-                # Si lo es, revisamos si tiene el nombre requerido
-                if channel.name == 'general':
-                    await channel.send("Quedan 3 horas para el reinicio de los penes!")
+                    # Si lo es, revisamos si tiene el nombre requerido
+                    if channel.name == 'general':
+                        await channel.send("Quedan 3 horas para el reinicio de los penes!")
 
-    elif mins == 60:  # 60/60 == 1
-        # Iteramos entre todos los canales que tenga disponible el bot
-        for channel in client.get_all_channels():
+        elif mins == 60:  # 60/60 == 1
+            # Iteramos entre todos los canales que tenga disponible el bot
+            for channel in guild.channels:
 
-            # Revisamos si cada canal es un canal de texto
-            if isinstance(channel, discord.TextChannel):
+                # Revisamos si cada canal es un canal de texto
+                if isinstance(channel, discord.TextChannel):
 
-                # Si lo es, revisamos si tiene el nombre requerido
-                if channel.name == 'general':
-                    await channel.send("Queda 1 hora para el reinicio de los penes!")
+                    # Si lo es, revisamos si tiene el nombre requerido
+                    if channel.name == 'general':
+                        await channel.send("Queda 1 hora para el reinicio de los penes!")
 
-    elif mins == 10:
-        # Iteramos entre todos los canales que tenga disponible el bot
-        for channel in client.get_all_channels():
+        elif mins == 10:
+            # Iteramos entre todos los canales que tenga disponible el bot
+            for guild_channel in guild.channels:
 
-            # Revisamos si cada canal es un canal de texto
-            if isinstance(channel, discord.TextChannel):
+                # Revisamos si cada canal es un canal de texto
+                if isinstance(guild_channel, discord.TextChannel):
 
-                # Si lo es, revisamos si tiene el nombre requerido
-                if channel.name == 'general':
-                    await channel.send("Quedan 10 minutos para el reinicio de los penes, @everyone!")
+                    # Si lo es, revisamos si tiene el nombre requerido
+                    if guild_channel.name == 'general':
+                        channel = guild_channel
+                        break
 
-    elif mins == 0:  # Pasó una semana y se deben reiniciar los penes!
+            await channel.send("Quedan 10 minutos para el reinicio de los penes, Recuerden que los"
+                               " que estén en la cima de la tabla recibirán premios @everyone!")
 
-        # Iteramos entre todos los canales que tenga disponible el bot
-        for channel in client.get_all_channels():
+        elif mins == 0:  # Pasó una semana y se deben reiniciar los penes!
 
-            # Revisamos si cada canal es un canal de texto
-            if isinstance(channel, discord.TextChannel):
+            # Además de que se reinician los penes, también debemos otorgar los PeneCréditos a los ganadores
+            ganancias = discord.Embed(title="Felicidades a los ganadores!")
 
-                # Si lo es, revisamos si tiene el nombre requerido
-                if channel.name == 'general':
-                    eliminar_penes()
-                    print('---------------------------------------------------------------------')
-                    print('Se borraron los penes')  # Debugging
-                    print('---------------------------------------------------------------------')
-                    await channel.send("Los penes han sido eliminados @everyone")
-                    break
+            # Otorgamos PeneCréditos a los admins
+            for admin in database.get_admins(guild.id):
+                database.give_penecreditos(393917904506191872, admin, 75)
+                user = await client.fetch_user(admin)
+                ganancias.add_field(name="Ganador por ser admin! (+75 PC)", value=user.mention, inline=False)
+
+            # Otorgamos PeneCréditos a los más pajilleros
+            ganadores_paja = database.get_paja_winners(guild.id)
+
+            for pajero in ganadores_paja:
+                database.give_penecreditos(guild.id, pajero[0], int(1.5*pajero[1]))
+                user = await client.fetch_user(pajero[0])
+                ganancias.add_field(name=f"Ganador por pajillero (+{int(1.5*pajero[1])}PC)", value=user.mention)
+
+            # Iteramos entre todos los canales que tenga disponible el bot
+            for channel in guild.channels:
+
+                # Revisamos si cada canal es un canal de texto
+                if isinstance(channel, discord.TextChannel):
+
+                    # Si lo es, revisamos si tiene el nombre requerido
+                    if channel.name == 'general':
+                        eliminar_penes(guild.id)
+                        print('---------------------------------------------------------------------')
+                        print('Se borraron los penes')  # Debugging
+                        print('---------------------------------------------------------------------')
+                        await channel.send("Los penes han sido eliminados @everyone", embed=ganancias)
+
+                        break
+
+
+@client.command(pass_context=True)
+async def penecreditos(ctx):
+    await ctx.send(embed=discord.Embed(
+        title=f"Actualmente tienes {database.get_penecreditos(ctx.message.guild.id, ctx.author.id)} PeneCréditos"))
+
+
+@client.command(pass_context=True)
+async def penetienda(ctx):
+
+    current_penecreditos = database.get_penecreditos(ctx.guild.id, ctx.author.id)
+
+    # Embed que contendrá la "vitrina" de la tienda
+    vitrina = discord.Embed(
+        title="Bienvenido a la PeneTienda!",
+        description=f"Este es el mejor lugar para venir a gastar tus PeneCréditos! "
+                    f"Tienes {current_penecreditos} PeneCréditos")
+
+    cont = 1
+    for item in tienda.display_items:
+        vitrina.add_field(name=f"{cont}️⃣ {item.name} ({item.cost} PC)", value=item.description, inline=False)
+        cont += 1
+
+    msg = await ctx.send(embed=vitrina)
+
+    for x in range(1, len(tienda.display_items) + 1):
+        await msg.add_reaction(f"{x}⃣")
+
+    compras_actuales[msg.id] = ctx.author.id
 
 
 @client.command(name='anuncioAdmin', hidden=True, pass_context=True)
@@ -1082,6 +1145,7 @@ async def anuncio(context, *args):
 
     print('---------------------------------------------------------------------')
 
+
 # Manejo de errores
 @eu.error
 async def eu_error(ctx, error):
@@ -1150,6 +1214,36 @@ async def on_ready():
     print(client.user.name)  # Debugging
     print(client.user.id)  # Debugging
     print('---------------------------------------------------------------------')  # debugging
+
+    # Iniciar contador de reseteo
+    upd_cont_reset.start()
+
+
+@client.event
+async def on_reaction_add(reaction, user):
+    if user.id != client.user.id:
+        if reaction.message.id in compras_actuales:
+            if user.id == compras_actuales[reaction.message.id]:
+
+                valid_emojis = {
+                    '1⃣': 1, '2⃣': 2, '3⃣': 3, '4⃣': 4, '5⃣': 5, '6⃣': 6, '7⃣': 7, '8⃣': 8, '9⃣': 9
+                }
+
+                if reaction.emoji in valid_emojis:
+                    purchase_item = tienda.display_items[int(reaction.emoji[0]) - 1]
+
+                    success = database.get_penecreditos(reaction.message.guild.id, user.id) >= purchase_item.cost
+
+                    if success:
+                        database.purchase(reaction.message.guild.id, user.id, purchase_item)
+
+                        del compras_actuales[reaction.message.id]
+                        await reaction.message.channel.send(f"{user.mention} ha comprado {purchase_item.name} "
+                                                            f"por {purchase_item.cost} PeneCréditos")
+                        await reaction.message.delete()
+
+                    else:
+                        await reaction.message.channel.send("No tienes PeneCréditos suficientes para comprar ese item!")
 
 
 def get_player_embed(stats: dict, pic: str):
@@ -1234,6 +1328,5 @@ def get_token(particiones):
 
 if __name__ == '__main__':
     TOKEN = get_token(3)
-    upd_cont_reset.start()
-
     client.run(TOKEN)
+

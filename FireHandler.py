@@ -2,6 +2,10 @@ import pyrebase
 from dotenv import load_dotenv
 import os
 
+from gcloud.datastore import Key
+
+from Economia import Item
+
 load_dotenv()
 
 
@@ -57,7 +61,11 @@ class Database:
         cont_act = self.__db.child(guid).child('server-stats').child('reset-timer').get()
 
         # Si el servidor tiene contador, debemos reducirlo por 1
-        self.__db.child(guid).child('server-stats').update({'reset-timer': cont_act.val() - 1})
+        if cont_act.pyres is not None:
+            self.__db.child(guid).child('server-stats').update({'reset-timer': cont_act.val() - 5})
+
+        else:
+            self.__db.child(guid).child('server-stats').update({'reset-timer': 7200 - 5})
 
     def get_reset_timer(self, guid):
         """Obtiene el estado actual del contador"""
@@ -74,7 +82,7 @@ class Database:
 
     def reset_all(self, guid):
         # Reiniciamos el timer
-        self.__db.child(guid).child('server-stats').update({'reset-timer': 10080})
+        self.__db.child(guid).child('server-stats').update({'reset-timer': 7200})
 
         # Obtenemos todos los usuarios en una lista
         guild_users = self.__db.child(guid).child('user-stats').get()
@@ -107,6 +115,31 @@ class Database:
                     res[user.key()] = user.val()['pajas']
 
         return res
+
+    def get_paja_winners(self, guid):
+
+        lista_pajas = self.get_all_pajas(guid)
+
+        if lista_pajas == {}:
+            return []
+
+        lista_ordenada = sorted(lista_pajas.items(), key=lambda x: x[1], reverse=True)
+
+        ganadores = []
+
+        main_pajero = lista_ordenada[0]
+        ganadores.append(main_pajero)
+
+        for pajero in lista_ordenada[1:]:
+            if pajero[1] == main_pajero[1]:
+                ganadores.append(pajero)
+
+            else:
+                break
+
+        return ganadores
+
+
 
     def get_all_penes(self, guid):
         guild_users = self.__db.child(guid).child("user-stats").get()
@@ -141,6 +174,50 @@ class Database:
 
         return admin_ids
 
+    def get_penecreditos(self, guid, uuid):
+        creditos = self.__db.child(guid).child('user-stats').child(uuid).child('penecreditos').get()
+
+        num = creditos.val()
+
+        return num if num is not None else 0
+
+    def give_penecreditos(self, guid, uuid, given_creditos):
+
+        creditos_actuales = self.__db.child(guid).child('user-stats').child(uuid).child('penecreditos').get()
+
+        num = creditos_actuales.val()
+
+        if num is None:
+            self.__db.child(guid).child('user-stats').child(uuid).update({'penecreditos': given_creditos})
+
+        else:
+            self.__db.child(guid).child('user-stats').child(uuid).update(
+                {'penecreditos': num + given_creditos}
+            )
+
+    def purchase(self, guid, uuid, item: Item):
+        user = self.__db.child(guid).child('user-stats').child(uuid).child('penecreditos').get()
+        inventario = self.__db.child(guid).child('user-stats').child(uuid).child('inventario').get()
+        new_creditos = user.val() - item.cost
+        self.__db.child(guid).child('user-stats').child(uuid).update({'penecreditos': new_creditos})
+
+        try:
+            item_amount = inventario.val()[item.name]
+            self.__db.child(guid).child('user-stats').child(uuid).update({item.name: item_amount + 1})
+
+        except KeyError:
+            self.__db.child(guid).child('user-stats').child(uuid).update({item.name: 1})
+
+        except TypeError:
+            self.__db.child(guid).child('user-stats').child(uuid).child('inventario').update({item.name: 1})
+
 
 if __name__ == '__main__':
     db = Database()
+
+    ganadores = db.get_paja_winners(393917904506191872)
+
+    print(ganadores)
+
+
+
