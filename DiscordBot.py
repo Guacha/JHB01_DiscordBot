@@ -113,7 +113,7 @@ async def upd_cont_reset():
                         channel = guild_channel
                         break
 
-            await channel.send("Quedan 10 minutos para el reinicio de los penes, Recuerden que los"
+            await guild_channel.send("Quedan 10 minutos para el reinicio de los penes, Recuerden que los"
                                " que estén en la cima de la tabla recibirán premios @everyone!")
 
         elif mins == 0:  # Pasó una semana y se deben reiniciar los penes!
