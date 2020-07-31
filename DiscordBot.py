@@ -31,6 +31,9 @@ print('---------------------------------------------------------------------')
 ansiados = {}
 
 compras_actuales = {}
+using_item = {}
+confirmation = {}
+target_selection = {}
 
 
 def eliminar_penes(guild_id):
@@ -152,15 +155,94 @@ async def upd_cont_reset():
                         break
 
 
-@client.command(pass_context=True)
+@client.command(name='usar',
+                description='Comando para usar alguno de los items en tu inventario',
+                brief='Usa un item!',
+                aliases=['Usar', 'usaritem', 'USAR', 'Usaritem', 'USARITEM'],
+                usage='/usaritem',
+                pass_context=True)
+async def use(ctx):
+    # Debugging
+    print('---------------------------------------------------------------------')
+    print('Comando de usar item')
+    print(f"Usuario que lo solicita: {ctx.author}")
+
+    # Obtenemos el inventario del usuario
+    inv = database.get_inventory(ctx.message.guild.id, ctx.author.id)
+
+    # Más debugging
+    print(f"inventario de {ctx.author}: {dict(inv)}")
+
+    # Creamos el embed que contendrá la información del usuario
+    inventory_embed = discord.Embed(title="Aquí tienes tu inventario, elige el item que quieres usar")
+
+    # Si el usuario tiene al menos 1 item
+    if inv != {}:
+
+        # Ponemos todos los items en el embed
+        cont = 1
+        for item in inv:
+            inventory_embed.add_field(name=f"{cont}️⃣: {item}", value=f"Tienes: {inv[item]}", inline=False)
+
+        # Enviamos el mensaje que contiene el menú
+        msg = await ctx.send(embed=inventory_embed)
+
+        # Insertamos los botones que funcionarán como reacciones
+        for x in range(1, len(inv) + 1):
+            await msg.add_reaction(f'{x}️⃣')
+
+        # Insertamos un botón de cancelar
+        await msg.add_reaction('❌')
+
+        # Metemos al usuario en la lista de queries para usar items
+        using_item[msg.id] = ctx.author.id
+
+    # Si no tiene items, lo mandamos a la vrg
+    else:
+        inventory_embed.add_field(name="No tienes items en tu inventario!",
+                                  value="Usa el comando **/penetienda** para comprar algunos items")
+
+        await ctx.send(embed=inventory_embed)
+
+    print('---------------------------------------------------------------------')
+
+
+@client.command(name='penecreditos',
+                description='Comando para ver los penecreditos que tienes actualmente',
+                brief='Mira tus penecreditos!',
+                aliases=['Penecreditos', 'PENECREDITOS', 'pc', 'Pc', 'PC'],
+                usage='/penecreditos',
+                pass_context=True)
 async def penecreditos(ctx):
-    await ctx.send(embed=discord.Embed(
-        title=f"Actualmente tienes {database.get_penecreditos(ctx.message.guild.id, ctx.author.id)} PeneCréditos"))
+
+    # Header para debug
+    print('---------------------------------------------------------------------')
+    print("Comando de penecreditos")
+
+    # Obtenemos los PC del usuario
+    pc = database.get_penecreditos(ctx.message.guild.id, ctx.author.id)
+
+    # Más debugging
+    print(f"Usuario: {ctx.author}, Penecreditos: {pc}")
+
+    # Mostramos información
+    await ctx.send(embed=discord.Embed(title=f"Actualmente tienes {pc} PeneCréditos"))
 
 
-@client.command(pass_context=True)
+@client.command(name='penetienda',
+                description='Comando para gastar los penecreditos que tienes actualmente en la tienda',
+                brief='Gasta tus penecreditos en la tienda!',
+                aliases=['Penetienda', 'PENETIENDA'],
+                usage='/penetienda',
+                pass_context=True)
 async def penetienda(ctx):
 
+    # Header para debugging
+    print('---------------------------------------------------------------------')
+    print("Comando de penetienda")
+    print(f"Usuario: {ctx.author}")
+    print(f"Items en tienda: {[item.name for item in tienda.display_items]}")
+    # Obtenemos los pc actuales del usuario
     current_penecreditos = database.get_penecreditos(ctx.guild.id, ctx.author.id)
 
     # Embed que contendrá la "vitrina" de la tienda
@@ -169,17 +251,26 @@ async def penetienda(ctx):
         description=f"Este es el mejor lugar para venir a gastar tus PeneCréditos! "
                     f"Tienes {current_penecreditos} PeneCréditos")
 
+    # Ponemos los items en display en la vitrina
     cont = 1
     for item in tienda.display_items:
         vitrina.add_field(name=f"{cont}️⃣ {item.name} ({item.cost} PC)", value=item.description, inline=False)
         cont += 1
 
+    # Enviamos el menú con la vitrina
     msg = await ctx.send(embed=vitrina)
 
+    # Agregamos los botones de opciones
     for x in range(1, len(tienda.display_items) + 1):
         await msg.add_reaction(f"{x}⃣")
 
+    # Agregamos un botón de cancelar
+    await msg.add_reaction('❌')
+
+    # Agregamos al usuario a la lista de compradores actuales
     compras_actuales[msg.id] = ctx.author.id
+
+    print('---------------------------------------------------------------------')
 
 
 @client.command(name='anuncioAdmin', hidden=True, pass_context=True)
@@ -1220,7 +1311,7 @@ async def on_ready():
 
 
 @client.event
-async def on_reaction_add(reaction, user):
+async def on_reaction_add(reaction: discord.Reaction, user):
     if user.id != client.user.id:
         if reaction.message.id in compras_actuales:
             if user.id == compras_actuales[reaction.message.id]:
@@ -1242,8 +1333,122 @@ async def on_reaction_add(reaction, user):
                                                             f"por {purchase_item.cost} PeneCréditos")
                         await reaction.message.delete()
 
+                        tienda.reset_display_items()
+
                     else:
                         await reaction.message.channel.send("No tienes PeneCréditos suficientes para comprar ese item!")
+
+                        await reaction.remove(user)
+
+                elif reaction.emoji == '❌':
+                    await reaction.message.channel.send("Has cancelado tu compra")
+
+                    del compras_actuales[reaction.message.id]
+
+                    await reaction.message.delete()
+
+
+        elif reaction.message.id in using_item:
+            if user.id == using_item[reaction.message.id]:
+
+                sel_emojis = {
+                    '1️⃣': 1, '2️⃣': 2, '3️⃣': 3, '4️⃣': 4, '5️⃣': 5, '6️⃣': 6, '7️⃣': 7, '8️⃣': 8, '9️⃣': 9
+                }
+
+                if reaction.emoji in sel_emojis:
+
+                    msg = reaction.message
+
+                    channel = msg.channel
+
+                    inv = database.get_inventory(msg.guild.id, user.id)
+
+                    inv_items = list(inv.keys())
+
+                    used_item = inv_items[int(reaction.emoji[0]) - 1]
+
+                    item = tienda.item_from_string(used_item)
+
+                    del using_item[msg.id]
+
+                    await msg.delete()
+
+                    msg = await channel.send(embed=discord.Embed(
+                        title=f"Estás seguro que deseas usar {item.name}?",
+                        description=f"Actualmente tienes {inv[item.name]}"
+                    ))
+
+                    await msg.add_reaction('⭕')
+                    await msg.add_reaction('❌')
+
+                    confirmation[msg.id] = (user.id, item)
+
+                elif reaction.emoji == '❌':
+                    await reaction.message.channel.send("Has cancelado el uso de tu item")
+                    await reaction.message.delete()
+                    del using_item[reaction.message.id]
+
+        elif reaction.message.id in confirmation:
+            if user.id == confirmation[reaction.message.id][0]:
+
+                if reaction.emoji == '⭕':
+
+                    item = confirmation[reaction.message.id][1]
+                    user_id = confirmation[reaction.message.id][0]
+                    channel = reaction.message.channel
+
+                    await use_item(user_id, reaction.message.guild.id, item, channel)
+
+                    del confirmation[reaction.message.id]
+
+                elif reaction.emoji == '❌':
+
+                    await reaction.message.channel.send("Has cancelado el uso de tu item")
+
+                    del confirmation[reaction.message.id]
+
+
+@client.event
+async def on_message(message: discord.Message):
+
+    if message.author.id != client.user.id:
+
+        if message.content.startswith(client.command_prefix):
+            await client.process_commands(message)
+            return
+
+        if message.author.id in target_selection:
+
+            if len(message.mentions) == 1:
+
+                item = target_selection[message.author.id]
+
+                target: discord.User = message.mentions[0]
+
+                if 'rival-' in item.effect:
+
+                    guid = message.guild.id
+
+                    try:
+
+                        reduction = int(item.effect[-1])
+
+                        current_target_size = database.get_pene(guid, target.id)
+
+                        database.set_pene(guid, target.id, current_target_size - reduction)
+
+                        embed = discord.Embed(title="Se ha reducido el tamaño de un pene!")
+                        embed.add_field(name=f"Pene de {target.display_name}",
+                                        value=f"{current_target_size} :arrow_right: {current_target_size - reduction}")
+
+                        await message.channel.send(f"Algo ha pasado con tu pene {target.mention}!", embed=embed)
+
+                        del target_selection[message.author.id]
+
+                        database.consume_item(guid, message.author.id, item)
+
+                    except TypeError:
+                        await message.channel.send("Tu objetivo aún no tiene tamaño de pene, no puedes reducirlo!")
 
 
 def get_player_embed(stats: dict, pic: str):
@@ -1324,6 +1529,59 @@ def get_token(particiones):
     print('Token descifrado: {}'.format(token))
     print('---------------------------------------------------------------------')
     return token
+
+
+async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.TextChannel) -> bool:
+
+    if 'pene+' in item.effect:
+        increase_size = int(item.effect[-1])
+
+        current_size = database.get_pene(guid, uuid)
+
+        if current_size is not None:
+
+            database.set_pene(guid, uuid, current_size+increase_size)
+
+            anuncio = discord.Embed(title="Felicidades! Tu tamaño de pene ha aumentado!",
+                                    description=f"{current_size} :arrow_right: {current_size+increase_size}")
+
+            await channel.send(embed=anuncio)
+
+            database.consume_item(guid, uuid, item)
+
+            # Retorna falso porque ya no debemos esperar un objetivo
+            return False
+
+        else:
+            await channel.send("Aún no tienes tamaño de pene! Primero obtén un tamaño y luego puedes usar este item")
+
+    elif 'rival-' in item.effect:
+
+        inst = discord.Embed(title="Envía un mensaje mencionando a la persona a la que quieres encogerle el pene",
+                             description=f"Por ejemplo: {client.user.mention}")
+        await channel.send(embed=inst)
+
+        target_selection[uuid] = item
+
+        return True
+
+    elif 'pajas+' in item.effect:
+
+        cant_pajas = int(item.effect.split('+')[-1])
+
+        pajas_actuales = database.get_pajas(guid, uuid)
+
+        for _ in range(cant_pajas):
+            database.add_paja(guid, uuid)
+
+        user = await client.fetch_user(uuid)
+        anuncio = discord.Embed(title="Espero que lo hayas disfrutado!",
+                                description=f"Pajas de {user.mention}: {pajas_actuales} :arrow_right: "
+                                            f"{pajas_actuales + cant_pajas}")
+
+        await channel.send(embed=anuncio)
+
+        return False
 
 
 if __name__ == '__main__':

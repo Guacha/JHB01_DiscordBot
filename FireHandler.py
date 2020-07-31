@@ -33,7 +33,7 @@ class Database:
     def set_pene(self, guid, uuid, new_tam):
         self.__db.child(guid).child('user-stats').child(uuid).update({'tamaño': new_tam})
 
-    def get_pajas(self, guid, uuid):
+    def get_pajas(self, guid: int, uuid: int):
         """Obtiene las pajas de un usuario"""
         pajas = self.__db.child(guid).child('user-stats').child(uuid).child('pajas').get()
 
@@ -136,7 +136,14 @@ class Database:
 
         return ganadores
 
+    def get_inventory(self, guid, uuid):
+        """Obtiene el inventario de un usuario en un servidor específico"""
 
+        inventory_response = self.__db.child(guid).child('user-stats').child(uuid).child('inventario').get()
+
+        inventory = inventory_response.val()
+
+        return inventory if inventory is not None else {}
 
     def get_all_penes(self, guid):
         guild_users = self.__db.child(guid).child("user-stats").get()
@@ -208,13 +215,23 @@ class Database:
         except TypeError:
             self.__db.child(guid).child('user-stats').child(uuid).child('inventario').update({item.name: 1})
 
+    def consume_item(self, guid, uuid, item: Item):
+        inventario = self.__db.child(guid).child('user-stats').child(uuid).child('inventario').get()
+        item_amount = inventario.val()[item.name]
+
+        if item_amount > 1:
+            self.__db.child(guid).child('user-stats').child(uuid).child('inventario').update({item.name: item_amount - 1})
+
+        else:
+            self.__db.child(guid).child('user-stats').child(uuid).child('inventario').child(item.name).remove()
+
 
 if __name__ == '__main__':
     db = Database()
 
-    ganadores = db.get_paja_winners(393917904506191872)
+    inv = db.get_inventory(375866694465355776, 301155670793781248)
 
-    print(ganadores)
+    print(inv)
 
 
 

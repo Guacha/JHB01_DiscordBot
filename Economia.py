@@ -3,9 +3,10 @@ import random
 
 class Item:
 
-    def __init__(self, item_name: str, item_description: str, item_cost: int, store_prob: float):
+    def __init__(self, item_name: str, item_description: str, item_effect: str, item_cost: int, store_prob: float):
         self.name = item_name
         self.description = item_description
+        self.effect = item_effect
         self.cost = item_cost
         self.prob = store_prob
 
@@ -15,7 +16,12 @@ class Item:
             item_list = []
             for item in f.readlines():
                 item_values = item.split(',')
-                item_list.append(Item(item_values[0], item_values[1], int(item_values[2]), float(item_values[3])))
+                item_list.append(Item(item_values[0],  # Nombre de Item
+                                      item_values[1],  # Descripción del Item
+                                      item_values[2],  # Efecto del item
+                                      int(item_values[3]),  # Valor del item
+                                      float(item_values[4]  # Probabilidad de que aparezca en tienda
+                                            )))
 
             return item_list
 
@@ -36,6 +42,13 @@ class Tienda:
             if random.random() <= (item.prob/100):
                 self.display_items.append(item)
 
+    def item_from_string(self, item_name) -> Item:
+
+        for item in self.__item_list:
+            if item_name == item.name:
+                return item
+
+        return None
 
 
 if __name__ == '__main__':
