@@ -207,7 +207,8 @@ class Database:
 
         try:
             item_amount = inventario.val()[item.name]
-            self.__db.child(guid).child('user-stats').child(uuid).update({item.name: item_amount + 1})
+            self.__db.child(guid).child('user-stats').child(uuid)\
+                .child('inventario').update({item.name: item_amount + 1})
 
         except KeyError:
             self.__db.child(guid).child('user-stats').child(uuid).update({item.name: 1})
@@ -229,9 +230,7 @@ class Database:
 if __name__ == '__main__':
     db = Database()
 
-    inv = db.get_inventory(375866694465355776, 301155670793781248)
 
-    print(inv)
 
 
 

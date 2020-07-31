@@ -1347,7 +1347,6 @@ async def on_reaction_add(reaction: discord.Reaction, user):
 
                     await reaction.message.delete()
 
-
         elif reaction.message.id in using_item:
             if user.id == using_item[reaction.message.id]:
 
