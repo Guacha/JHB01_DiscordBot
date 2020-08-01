@@ -1402,7 +1402,7 @@ async def on_reaction_add(reaction: discord.Reaction, user):
                     item = confirmation[reaction.message.id][1]
                     user_id = confirmation[reaction.message.id][0]
                     channel: discord.TextChannel = reaction.message.channel
-                    with await channel.typing():
+                    async with channel.typing():
                         await use_item(user_id, reaction.message.guild.id, item, channel)
 
                         del confirmation[reaction.message.id]
