@@ -234,8 +234,8 @@ class Database:
 
         current_chance = self.__db.child(guid).child('user-stats').child(uuid).child('prob').get()
 
+        self.consume_pc(guid, uuid, price)
         try:
-            self.consume_pc(guid, uuid, price)
             self.__db.child(guid).child('user-stats').child(uuid).update({'prob': current_chance.val() + increase})
 
         except TypeError:
