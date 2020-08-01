@@ -1405,6 +1405,8 @@ async def on_reaction_add(reaction: discord.Reaction, user):
                     async with channel.typing():
                         await use_item(user_id, reaction.message.guild.id, item, channel)
 
+                        await reaction.message.delete()
+
                         del confirmation[reaction.message.id]
 
                         database.consume_item(reaction.message.guild.id, user_id, item)
