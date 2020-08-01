@@ -7,7 +7,7 @@ class Item:
         self.name = item_name
         self.description = item_description
         self.effect = item_effect
-        self.cost = item_cost
+        self.cost: int = item_cost
         self.prob = store_prob
 
     @staticmethod

@@ -200,11 +200,14 @@ class Database:
                 {'penecreditos': num + given_creditos}
             )
 
-    def purchase(self, guid, uuid, item: Item):
+    def consume_pc(self, guid, uuid, credits: int):
         user = self.__db.child(guid).child('user-stats').child(uuid).child('penecreditos').get()
-        inventario = self.__db.child(guid).child('user-stats').child(uuid).child('inventario').get()
-        new_creditos = user.val() - item.cost
+        new_creditos = user.val() - credits
         self.__db.child(guid).child('user-stats').child(uuid).update({'penecreditos': new_creditos})
+
+    def purchase(self, guid, uuid, item: Item):
+        inventario = self.__db.child(guid).child('user-stats').child(uuid).child('inventario').get()
+        self.consume_pc(guid, uuid, item.cost)
 
         try:
             item_amount = inventario.val()[item.name]
@@ -227,14 +230,15 @@ class Database:
         else:
             self.__db.child(guid).child('user-stats').child(uuid).child('inventario').child(item.name).remove()
 
-    def increase_prob(self, guid, uuid, increase=1):
+    def increase_prob(self, guid, uuid, price, increase=1):
 
         current_chance = self.__db.child(guid).child('user-stats').child(uuid).child('prob').get()
 
         try:
+            self.consume_pc(guid, uuid, price)
             self.__db.child(guid).child('user-stats').child(uuid).update({'prob': current_chance.val() + increase})
 
-        except AttributeError:
+        except TypeError:
             self.__db.child(guid).child('user-stats').child(uuid).update({'prob': increase})
 
 

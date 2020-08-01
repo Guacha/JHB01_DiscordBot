@@ -1327,7 +1327,8 @@ async def on_reaction_add(reaction: discord.Reaction, user):
                         if 'prob+' in purchase_item.effect:
                             prob_increase = purchase_item.effect.split('+')[-1]
 
-                            database.increase_prob(reaction.message.guild.id, user.id, increase=prob_increase)
+                            database.increase_prob(reaction.message.guild.id, user.id, purchase_item.cost,
+                                                   increase=prob_increase)
 
                         else:
 
