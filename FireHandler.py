@@ -19,7 +19,8 @@ class Database:
         self.__firebase = pyrebase.initialize_app(config)
         self.__db = self.__firebase.database()
 
-    def get_pene(self, guid, uuid):
+    def get_pene(self, guid: int, uuid: int):
+        """Obtiene el pene de un usuario en un servidor específico"""
         user = self.__db.child(guid).child('user-stats').child(uuid).get()
 
         try:  # Verificar si el usuario existe
@@ -211,7 +212,7 @@ class Database:
                 .child('inventario').update({item.name: item_amount + 1})
 
         except KeyError:
-            self.__db.child(guid).child('user-stats').child(uuid).update({item.name: 1})
+            self.__db.child(guid).child('user-stats').child(uuid).child('inventario').update({item.name: 1})
 
         except TypeError:
             self.__db.child(guid).child('user-stats').child(uuid).child('inventario').update({item.name: 1})
@@ -225,6 +226,16 @@ class Database:
 
         else:
             self.__db.child(guid).child('user-stats').child(uuid).child('inventario').child(item.name).remove()
+
+    def increase_prob(self, guid, uuid, increase=1):
+
+        current_chance = self.__db.child(guid).child('user-stats').child(uuid).child('prob').get()
+
+        try:
+            self.__db.child(guid).child('user-stats').child(uuid).update({'prob': current_chance.val() + increase})
+
+        except AttributeError:
+            self.__db.child(guid).child('user-stats').child(uuid).update({'prob': increase})
 
 
 if __name__ == '__main__':

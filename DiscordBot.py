@@ -27,7 +27,6 @@ tienda = Economia.Tienda()
 print("Módulo: Penetienda Inicializado con éxito")
 print('---------------------------------------------------------------------')
 
-
 ansiados = {}
 
 compras_actuales = {}
@@ -117,7 +116,7 @@ async def upd_cont_reset():
                         break
 
             await guild_channel.send("Quedan 10 minutos para el reinicio de los penes, Recuerden que los"
-                               " que estén en la cima de la tabla recibirán premios @everyone!")
+                                     " que estén en la cima de la tabla recibirán premios @everyone!")
 
         elif mins == 0:  # Pasó una semana y se deben reiniciar los penes!
 
@@ -134,9 +133,9 @@ async def upd_cont_reset():
             ganadores_paja = database.get_paja_winners(guild.id)
 
             for pajero in ganadores_paja:
-                database.give_penecreditos(guild.id, pajero[0], int(1.5*pajero[1]))
+                database.give_penecreditos(guild.id, pajero[0], int(1.5 * pajero[1]))
                 user = await client.fetch_user(pajero[0])
-                ganancias.add_field(name=f"Ganador por pajillero (+{int(1.5*pajero[1])}PC)", value=user.mention)
+                ganancias.add_field(name=f"Ganador por pajillero (+{int(1.5 * pajero[1])}PC)", value=user.mention)
 
             # Iteramos entre todos los canales que tenga disponible el bot
             for channel in guild.channels:
@@ -214,7 +213,6 @@ async def use(ctx):
                 usage='/penecreditos',
                 pass_context=True)
 async def penecreditos(ctx):
-
     # Header para debug
     print('---------------------------------------------------------------------')
     print("Comando de penecreditos")
@@ -236,7 +234,6 @@ async def penecreditos(ctx):
                 usage='/penetienda',
                 pass_context=True)
 async def penetienda(ctx):
-
     # Header para debugging
     print('---------------------------------------------------------------------')
     print("Comando de penetienda")
@@ -1326,9 +1323,18 @@ async def on_reaction_add(reaction: discord.Reaction, user):
                     success = database.get_penecreditos(reaction.message.guild.id, user.id) >= purchase_item.cost
 
                     if success:
-                        database.purchase(reaction.message.guild.id, user.id, purchase_item)
+
+                        if 'prob+' in purchase_item.effect:
+                            prob_increase = purchase_item.effect.split('+')[-1]
+
+                            database.increase_prob(reaction.message.guild.id, user.id, increase=prob_increase)
+
+                        else:
+
+                            database.purchase(reaction.message.guild.id, user.id, purchase_item)
 
                         del compras_actuales[reaction.message.id]
+
                         await reaction.message.channel.send(f"{user.mention} ha comprado {purchase_item.name} "
                                                             f"por {purchase_item.cost} PeneCréditos")
                         await reaction.message.delete()
@@ -1394,11 +1400,13 @@ async def on_reaction_add(reaction: discord.Reaction, user):
 
                     item = confirmation[reaction.message.id][1]
                     user_id = confirmation[reaction.message.id][0]
-                    channel = reaction.message.channel
+                    channel: discord.TextChannel = reaction.message.channel
+                    with await channel.typing():
+                        await use_item(user_id, reaction.message.guild.id, item, channel)
 
-                    await use_item(user_id, reaction.message.guild.id, item, channel)
+                        del confirmation[reaction.message.id]
 
-                    del confirmation[reaction.message.id]
+                        database.consume_item(reaction.message.guild.id, user_id, item)
 
                 elif reaction.emoji == '❌':
 
@@ -1409,7 +1417,6 @@ async def on_reaction_add(reaction: discord.Reaction, user):
 
 @client.event
 async def on_message(message: discord.Message):
-
     if message.author.id != client.user.id:
 
         if message.content.startswith(client.command_prefix):
@@ -1531,7 +1538,6 @@ def get_token(particiones):
 
 
 async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.TextChannel) -> bool:
-
     if 'pene+' in item.effect:
         increase_size = int(item.effect[-1])
 
@@ -1539,14 +1545,12 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
 
         if current_size is not None:
 
-            database.set_pene(guid, uuid, current_size+increase_size)
+            database.set_pene(guid, uuid, current_size + increase_size)
 
             anuncio = discord.Embed(title="Felicidades! Tu tamaño de pene ha aumentado!",
-                                    description=f"{current_size} :arrow_right: {current_size+increase_size}")
+                                    description=f"{current_size} :arrow_right: {current_size + increase_size}")
 
             await channel.send(embed=anuncio)
-
-            database.consume_item(guid, uuid, item)
 
             # Retorna falso porque ya no debemos esperar un objetivo
             return False
@@ -1582,8 +1586,68 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
 
         return False
 
+    elif 'admin-' in item.effect:
+
+        reduc = int(item.effect.split('-')[-1])
+
+        admins = database.get_admins(guid)
+
+        anuncio = discord.Embed(title="Has reducido el tamaño de los admins!")
+
+        # COmo todos los admins tiene el mismo tamaño, da igual cual usemos para el tamaño de los admins
+        admin_tam = database.get_pene(guid, admins[0])
+
+        # Nos aseguramos que el tamaño no sea negativo
+        if admin_tam - reduc < 0:
+            new_tam = 0
+
+        else:
+            new_tam = admin_tam - reduc
+        for admin_uuid in admins:
+
+            admin_user = await client.fetch_user(admin_uuid)
+
+            database.set_pene(guid, admin_uuid, new_tam)
+
+            anuncio.add_field(name=f"{admin_tam} :arrow_right: {new_tam}",
+                              value=f"Pene de {admin_user.mention}", inline=False)
+
+        await channel.send(embed=anuncio)
+
+        return False
+
+    elif 'todos-':
+
+        reduc = int(item.effect.split('-')[-1])
+
+        penes = database.get_all_penes(guid)
+
+        anuncio = discord.Embed(title="Has reducido el tamaño de todos!")
+
+        for target_uid in penes:
+
+            user = await client.fetch_user(target_uid)
+
+            curr_size = penes[target_uid]
+
+            if curr_size - reduc < 0:
+                new_tam = 0
+
+            else:
+                new_tam = curr_size - reduc
+
+            anuncio.add_field(name=f"{curr_size} :arrow_right: {new_tam}",
+                              value=f"Pene de {user.mention}",
+                              inline=False)
+
+            database.set_pene(guid, target_uid, new_tam)
+
+        user = await client.fetch_user(uuid)
+        await channel.send(f"{user.mention} redujo el tamaño de pene de todos! @everyone!", embed=anuncio)
+
+        return False
+
 
 if __name__ == '__main__':
     TOKEN = get_token(3)
     client.run(TOKEN)
-

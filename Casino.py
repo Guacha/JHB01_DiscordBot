@@ -3,6 +3,7 @@ from collections import deque
 
 
 class PeneLoteria:
+
     pass
 
 
