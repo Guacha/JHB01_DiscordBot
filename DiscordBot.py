@@ -176,20 +176,26 @@ async def blackjack(ctx):
                                  description=f"Decide cuanto apostarás. Tienes {user_pc} PeneCréditos™")
 
         # Añadimos todas las opciones
-        bet_menu.add_field(name=":one: : 5 PeneCréditos™",
+        bet_menu.add_field(name=":one: : 1 PeneCréditos™",
                            value="O eres un Pussy, o estás pobre, de ambas formas vales pito",
                            inline=False)
-        bet_menu.add_field(name=":two: : 10 PeneCréditos™",
+        bet_menu.add_field(name=":two: : 5 PeneCréditos™",
                            value="Al menos ya te vas bajando del bus",
                            inline=False)
-        bet_menu.add_field(name=":three: : 25 PeneCréditos™",
+        bet_menu.add_field(name=":three: : 10 PeneCréditos™",
                            value="Ahora si papi",
                            inline=False)
-        bet_menu.add_field(name=":four: : 50 PeneCréditos™",
+        bet_menu.add_field(name=":four: : 25 PeneCréditos™",
                            value="El que no arriesga, no gana",
                            inline=False)
-        bet_menu.add_field(name=":five: : 100 PeneCréditos™",
+        bet_menu.add_field(name=":five: : 50 PeneCréditos™",
                            value="Que belcebú proteja tu billetera",
+                           inline=False)
+        bet_menu.add_field(name=":six: : 100 PeneCréditos™",
+                           value="Confirmo que no tomas buenas decisiones",
+                           inline=False)
+        bet_menu.add_field(name=":seven: : 250 PeneCréditos™",
+                           value="weird flex but ok",
                            inline=False)
 
         menu: discord.Message = await ctx.send(embed=bet_menu)
@@ -199,6 +205,9 @@ async def blackjack(ctx):
         await menu.add_reaction('3️⃣')
         await menu.add_reaction('4️⃣')
         await menu.add_reaction('5️⃣')
+        await menu.add_reaction('6️⃣')
+        await menu.add_reaction('7️⃣')
+        await menu.add_reaction('❌')
 
         betting[menu.id] = ctx.author.id
 
@@ -1478,11 +1487,13 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
                 user_pc = database.get_penecreditos(msg.guild.id, user.id)
 
                 betting_options = {
-                    '1️⃣': 5,
-                    '2️⃣': 10,
-                    '3️⃣': 25,
-                    '4️⃣': 50,
-                    '5️⃣': 100
+                    '1️⃣': 1,
+                    '2️⃣': 5,
+                    '3️⃣': 10,
+                    '4️⃣': 25,
+                    '5️⃣': 50,
+                    '6️⃣': 100,
+                    '7️⃣': 250,
                 }
 
                 if reaction.emoji in betting_options:
@@ -1511,6 +1522,12 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
                         del betting[msg.id]
 
                         blackjack_games[user.id] = engine
+
+                elif reaction.emoji == '❌':
+
+                    await reaction.message.channel.send("Has salido del PeneCasino™")
+                    del betting[reaction.message.id]
+                    await reaction.message.delete()
 
         elif user.id in blackjack_games:
             if reaction.message.id == blackjack_games[user.id].message.id:
@@ -1649,9 +1666,12 @@ async def on_message(message: discord.Message):
                     # Verificación de si el ladrón fue leal
                     if random.random() < 0.5:
                         embed.description = "El ladrón ha sido fiel al contrato, recibes el 50% de lo que robó"
+
+                        current_user_pc = database.get_penecreditos(guid, message.author.id)
                         database.give_penecreditos(guid, message.author.id, stolen_pc//2)
+
                         embed.add_field(name=f"PC de {message.author.display_name}",
-                                        value=f"{current_target_pc} :arrow_right: {current_target_pc + stolen_pc}")
+                                        value=f"{current_target_pc} :arrow_right: {current_user_pc + stolen_pc}")
 
                     else:
                         embed.description = "Al ladrón le valió verga el contrato y se llevó todos los PC que robó"
