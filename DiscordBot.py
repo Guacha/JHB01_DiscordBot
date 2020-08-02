@@ -164,7 +164,7 @@ async def upd_cont_reset():
                 description='Comando para jugar blackjack',
                 brief='Juega blackjack en el PeneCasino™!',
                 aliases=['Peneblackjack', 'pbj', 'PBJ', 'PENEBLACKJACK', 'PeneBlackJack', 'penebj', 'Penebj'],
-                usage='/usaritem',
+                usage='/peneblackjack',
                 pass_context=True)
 async def blackjack(ctx):
     if ctx.author.id not in blackjack_games:
@@ -206,10 +206,10 @@ async def blackjack(ctx):
         await ctx.send("Ya tienes una partida de PeneBlackjack™ activa, terminala para comenzar una nueva!")
 
 
-@client.command(name='usar',
+@client.command(name='usaritem',
                 description='Comando para usar alguno de los items en tu inventario',
                 brief='Usa un item!',
-                aliases=['Usar', 'usaritem', 'USAR', 'Usaritem', 'USARITEM'],
+                aliases=['Usar', 'Usaritem', 'USAR', 'UsarItem', 'USARITEM'],
                 usage='/usaritem',
                 pass_context=True)
 async def use(ctx):
@@ -234,6 +234,7 @@ async def use(ctx):
         cont = 1
         for item in inv:
             inventory_embed.add_field(name=f"{cont}️⃣: {item}", value=f"Tienes: {inv[item]}", inline=False)
+            cont += 1
 
         # Enviamos el mensaje que contiene el menú
         msg = await ctx.send(embed=inventory_embed)
@@ -1467,6 +1468,8 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
 
                     await reaction.message.channel.send("Has cancelado el uso de tu item")
 
+                    await reaction.message.delete()
+
                     del confirmation[reaction.message.id]
 
         elif reaction.message.id in betting:
@@ -1606,7 +1609,7 @@ async def on_message(message: discord.Message):
 
                     try:
 
-                        reduction = int(item.effect[-1])
+                        reduction = int(item.effect.split('-')[-1])
 
                         current_target_size = database.get_pene(guid, target.id)
 
@@ -1616,7 +1619,9 @@ async def on_message(message: discord.Message):
                         embed.add_field(name=f"Pene de {target.display_name}",
                                         value=f"{current_target_size} :arrow_right: {current_target_size - reduction}")
 
-                        await message.channel.send(f"Algo ha pasado con tu pene {target.mention}!", embed=embed)
+                        await message.channel.send(f"{message.author.mention} ha usado {item.name} en "
+                                                   f"{target.mention}!",
+                                                   embed=embed)
 
                         del target_selection[message.author.id]
 
@@ -1624,6 +1629,36 @@ async def on_message(message: discord.Message):
 
                     except TypeError:
                         await message.channel.send("Tu objetivo aún no tiene tamaño de pene, no puedes reducirlo!")
+
+                elif 'robar-' in item.effect:
+
+                    guid = message.guild.id
+
+                    steal_percentage = int(item.effect.split('-')[-1])
+
+                    current_target_pc = database.get_penecreditos(guid, target.id)
+
+                    stolen_pc = int(current_target_pc*(steal_percentage/100))
+
+                    database.consume_pc(guid, target.id, stolen_pc)
+
+                    embed = discord.Embed(title="Has robado Penecréditos!")
+                    embed.add_field(name=f"PC de {target.display_name}",
+                                    value=f"{current_target_pc} :arrow_right: {current_target_pc - stolen_pc}")
+
+                    # Verificación de si el ladrón fue leal
+                    if random.random() < 0.5:
+                        embed.description = "El ladrón ha sido fiel al contrato, recibes el 50% de lo que robó"
+                        database.give_penecreditos(guid, message.author.id, stolen_pc//2)
+                        embed.add_field(name=f"PC de {message.author.display_name}",
+                                        value=f"{current_target_pc} :arrow_right: {current_target_pc + stolen_pc}")
+
+                    else:
+                        embed.description = "Al ladrón le valió verga el contrato y se llevó todos los PC que robó"
+
+                    await message.channel.send(f"{message.author.mention} ha usado {item.name} en "
+                                               f"{target.mention}!",
+                                               embed=embed)
 
 
 def get_player_embed(stats: dict, pic: str):
@@ -1812,7 +1847,7 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
 
         return False
 
-    elif 'todos-':
+    elif 'todos-' in item.effect:
 
         reduc = int(item.effect.split('-')[-1])
 
@@ -1842,6 +1877,14 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
         await channel.send(f"{user.mention} ha usado {item.name} @everyone", embed=anuncio)
 
         return False
+
+    elif 'robar-' in item.effect:
+
+        inst = discord.Embed(title="Envía un mensaje mencionando a la persona a la que quieres robarle",
+                             description=f"Por ejemplo: {client.user.mention}")
+        await channel.send(embed=inst)
+
+        target_selection[uuid] = item
 
 
 if __name__ == '__main__':
