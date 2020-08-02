@@ -136,12 +136,14 @@ async def upd_cont_reset():
                 ganancias.add_field(name="Ganador por ser admin! (+75 PC)", value=user.mention, inline=False)
 
             # Otorgamos PeneCréditos a los más pajilleros
-            ganadores_paja = database.get_paja_winners(guild.id)
+            ganadores_paja = database.get_all_pajas(guild.id)
 
             for pajero in ganadores_paja:
-                database.give_penecreditos(guild.id, pajero[0], int(1.5 * pajero[1]))
-                user = await client.fetch_user(pajero[0])
-                ganancias.add_field(name=f"Ganador por pajillero (+{int(1.5 * pajero[1])}PC)", value=user.mention)
+                database.give_penecreditos(guild.id, pajero, int(2 * ganadores_paja[pajero]))
+                user = await client.fetch_user(pajero)
+                ganancias.add_field(name=f"Ganador por pajillero (+{int(2 * ganadores_paja[pajero])}PC)",
+                                    value=user.mention,
+                                    inline=False)
 
             # Iteramos entre todos los canales que tenga disponible el bot
             for channel in guild.channels:
