@@ -167,7 +167,6 @@ async def upd_cont_reset():
                 usage='/usaritem',
                 pass_context=True)
 async def blackjack(ctx):
-
     if ctx.author.id not in blackjack_games:
         # Obtener PC del usuario
         user_pc = database.get_penecreditos(ctx.guild.id, ctx.author.id)
@@ -1487,7 +1486,6 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
                     bet = betting_options[reaction.emoji]
 
                     if bet <= user_pc:
-
                         await msg.clear_reactions()
 
                         database.consume_pc(msg.guild.id, user.id, bet)
@@ -1568,7 +1566,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
 
                         if winner:
 
-                            earnings = int(mult*game.player.bet)
+                            earnings = int(mult * game.player.bet)
 
                             game_embed = get_blackjack_embed(game, show_dealer_hand=True)
                             game_embed.set_footer(text=f"Has ganado, conseguiste {mult}x tu apuesta "
@@ -1583,6 +1581,8 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
                             game_embed.colour = discord.Colour.red()
 
                         await msg.edit(embed=game_embed)
+                        del blackjack_games[user.id]
+
 
 @client.event
 async def on_message(message: discord.Message):
@@ -1707,7 +1707,6 @@ def get_token(particiones):
 
 
 def get_blackjack_embed(blackjack: Casino.Blackjack, show_dealer_hand=False):
-
     game_embed = discord.Embed(title=f"Partida de blackjack de {blackjack.player.user.name}")
 
     game_embed.colour = discord.Colour.blue()
@@ -1717,14 +1716,17 @@ def get_blackjack_embed(blackjack: Casino.Blackjack, show_dealer_hand=False):
 
     if show_dealer_hand:
         game_embed.add_field(name=f"Dealer [{blackjack.get_dealer_value()}]",
-                             value=f"[ {' ] [ '.join([card.denomination for card in blackjack.dealer_hand])} ]")
+                             value=f"{' '.join([card.get_upper_emoji() for card in blackjack.dealer_hand])}\n"
+                                   f"{' '.join([card.get_lower_emoji() for card in blackjack.dealer_hand])}")
 
     else:
         game_embed.add_field(name=f"Dealer [?]",
-                             value=f"[ {blackjack.dealer_hand[0].denomination} ] [ ? ]")
+                             value=f"{blackjack.dealer_hand[0].get_upper_emoji()} {Casino.Card.back_top()}\n"
+                                   f"{blackjack.dealer_hand[0].get_lower_emoji()} {Casino.Card.back_bottom()}")
 
     game_embed.add_field(name=f"{blackjack.player.user.name} [{blackjack.player.get_numeric_value()}]",
-                         value=f"[ {' ] [ '.join([card.denomination for card in blackjack.player.hand])} ]")
+                         value=f"{' '.join([card.get_upper_emoji() for card in blackjack.player.hand])}\n"
+                               f"{' '.join([card.get_lower_emoji() for card in blackjack.player.hand])}")
 
     return game_embed
 
