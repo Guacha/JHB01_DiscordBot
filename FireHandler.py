@@ -179,7 +179,7 @@ class Database:
 
         return admin_ids
 
-    def get_penecreditos(self, guid, uuid):
+    def get_penecreditos(self, guid: int, uuid: int) -> int:
         creditos = self.__db.child(guid).child('user-stats').child(uuid).child('penecreditos').get()
 
         num = creditos.val()

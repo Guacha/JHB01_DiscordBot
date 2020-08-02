@@ -1,9 +1,13 @@
 import os
 import random
+from itertools import accumulate
+
 import discord
 import math
 import Scraper as miner
 import Economia
+import Casino
+import asyncio
 
 from FireHandler import Database
 from discord.ext.commands import Bot
@@ -33,6 +37,8 @@ compras_actuales = {}
 using_item = {}
 confirmation = {}
 target_selection = {}
+betting = {}
+blackjack_games = {}
 
 
 def eliminar_penes(guild_id):
@@ -154,6 +160,53 @@ async def upd_cont_reset():
                         break
 
 
+@client.command(name="peneblackjack",
+                description='Comando para jugar blackjack',
+                brief='Juega blackjack en el PeneCasino™!',
+                aliases=['Peneblackjack', 'pbj', 'PBJ', 'PENEBLACKJACK', 'PeneBlackJack'],
+                usage='/usaritem',
+                pass_context=True)
+async def blackjack(ctx):
+
+    if ctx.author.id not in blackjack_games:
+        # Obtener PC del usuario
+        user_pc = database.get_penecreditos(ctx.guild.id, ctx.author.id)
+
+        # Generamos el menú de apuestas
+        bet_menu = discord.Embed(title="Bienvenido al PeneCasino™! Juego: PeneBlackjack™/Pénis-Vingt-et-Un™",
+                                 description=f"Decide cuanto apostarás. Tienes {user_pc} PeneCréditos™")
+
+        # Añadimos todas las opciones
+        bet_menu.add_field(name=":one: : 5 PeneCréditos™",
+                           value="O eres un Pussy, o estás pobre, de ambas formas vales pito",
+                           inline=False)
+        bet_menu.add_field(name=":two: : 10 PeneCréditos™",
+                           value="Al menos ya te vas bajando del bus",
+                           inline=False)
+        bet_menu.add_field(name=":three: : 25 PeneCréditos™",
+                           value="Ahora si papi",
+                           inline=False)
+        bet_menu.add_field(name=":four: : 50 PeneCréditos™",
+                           value="El que no arriesga, no gana",
+                           inline=False)
+        bet_menu.add_field(name=":five: : 100 PeneCréditos™",
+                           value="Que belcebú proteja tu billetera",
+                           inline=False)
+
+        menu: discord.Message = await ctx.send(embed=bet_menu)
+
+        await menu.add_reaction('1️⃣')
+        await menu.add_reaction('2️⃣')
+        await menu.add_reaction('3️⃣')
+        await menu.add_reaction('4️⃣')
+        await menu.add_reaction('5️⃣')
+
+        betting[menu.id] = ctx.author.id
+
+    else:
+        await ctx.send("Ya tienes una partida de PeneBlackjack™ activa, terminala para comenzar una nueva!")
+
+
 @client.command(name='usar',
                 description='Comando para usar alguno de los items en tu inventario',
                 brief='Usa un item!',
@@ -207,8 +260,8 @@ async def use(ctx):
 
 
 @client.command(name='penecreditos',
-                description='Comando para ver los penecreditos que tienes actualmente',
-                brief='Mira tus penecreditos!',
+                description='Comando para ver los PeneCréditos™ que tienes actualmente',
+                brief='Mira tus PeneCréditos!',
                 aliases=['Penecreditos', 'PENECREDITOS', 'pc', 'Pc', 'PC'],
                 usage='/penecreditos',
                 pass_context=True)
@@ -228,8 +281,8 @@ async def penecreditos(ctx):
 
 
 @client.command(name='penetienda',
-                description='Comando para gastar los penecreditos que tienes actualmente en la tienda',
-                brief='Gasta tus penecreditos en la tienda!',
+                description='Comando para gastar los PeneCréditos™ que tienes actualmente en la PeneTienda™',
+                brief='Gasta tus PeneCréditos en la PenTienda™!',
                 aliases=['Penetienda', 'PENETIENDA'],
                 usage='/penetienda',
                 pass_context=True)
@@ -1308,7 +1361,7 @@ async def on_ready():
 
 
 @client.event
-async def on_reaction_add(reaction: discord.Reaction, user):
+async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     if user.id != client.user.id:
         if reaction.message.id in compras_actuales:
             if user.id == compras_actuales[reaction.message.id]:
@@ -1417,6 +1470,119 @@ async def on_reaction_add(reaction: discord.Reaction, user):
 
                     del confirmation[reaction.message.id]
 
+        elif reaction.message.id in betting:
+            if user.id == betting[reaction.message.id]:
+                msg: discord.Message = reaction.message
+                user_pc = database.get_penecreditos(msg.guild.id, user.id)
+
+                betting_options = {
+                    '1️⃣': 5,
+                    '2️⃣': 10,
+                    '3️⃣': 25,
+                    '4️⃣': 50,
+                    '5️⃣': 100
+                }
+
+                if reaction.emoji in betting_options:
+                    bet = betting_options[reaction.emoji]
+
+                    if bet <= user_pc:
+
+                        await msg.clear_reactions()
+
+                        database.consume_pc(msg.guild.id, user.id, bet)
+
+                        engine = Casino.Blackjack(Casino.Deck())
+                        engine.set_player(user, bet)
+                        engine.deal_hands()
+
+                        game_embed = get_blackjack_embed(engine)
+
+                        game_embed.set_footer(text="Decide qué harás ahora!")
+
+                        discord.Message = await msg.edit(embed=game_embed)
+
+                        await msg.add_reaction('✅')
+                        await msg.add_reaction('🛑')
+
+                        engine.set_ui(msg)
+
+                        del betting[msg.id]
+
+                        blackjack_games[user.id] = engine
+
+        elif user.id in blackjack_games:
+            if reaction.message.id == blackjack_games[user.id].message.id:
+
+                actions = ['✅', '🛑']
+
+                game: Casino.Blackjack = blackjack_games[user.id]
+
+                msg = reaction.message
+
+                if reaction.emoji in actions:
+
+                    await msg.clear_reactions()
+
+                    if reaction.emoji == '✅':
+
+                        game.hit_player()
+
+                        if game.player.get_numeric_value() > 21:
+
+                            game_embed = get_blackjack_embed(game, show_dealer_hand=True)
+                            game_embed.colour = discord.Colour.red()
+                            game_embed.set_footer(text="Vaya! Te has pasado de 21, Perdiste!")
+
+                            await msg.edit(embed=game_embed)
+
+                            del blackjack_games[user.id]
+
+                        else:
+
+                            game_embed = get_blackjack_embed(game)
+
+                            game_embed.set_footer(text="Decide qué harás ahora!")
+
+                            await msg.edit(embed=game_embed)
+
+                            await msg.add_reaction('✅')
+                            await msg.add_reaction('🛑')
+
+                    else:
+
+                        game_embed = get_blackjack_embed(game, show_dealer_hand=True)
+                        game_embed.set_footer(text="Turno del Dealer")
+
+                        await msg.edit(embed=game_embed)
+
+                        while game.get_dealer_hit():
+                            await asyncio.sleep(2)
+                            game.dealer_hand.append(game.deck.draw_card())
+
+                            game_embed = get_blackjack_embed(game, show_dealer_hand=True)
+                            game_embed.set_footer(text="El Dealer está jugando")
+                            await msg.edit(embed=game_embed)
+
+                        winner, mult = game.get_winners()
+
+                        if winner:
+
+                            earnings = int(mult*game.player.bet)
+
+                            game_embed = get_blackjack_embed(game, show_dealer_hand=True)
+                            game_embed.set_footer(text=f"Has ganado, conseguiste {mult}x tu apuesta "
+                                                       f"({earnings} PC)")
+                            game_embed.colour = discord.Colour.green()
+
+                            database.give_penecreditos(msg.guild.id, user.id, earnings)
+
+                        else:
+                            game_embed = get_blackjack_embed(game, show_dealer_hand=True)
+                            game_embed.set_footer(text=f"Has perdido, el dealer tiene una mejor mano que tú")
+                            game_embed.colour = discord.Colour.red()
+
+                        await msg.edit(embed=game_embed)
 
 @client.event
 async def on_message(message: discord.Message):
@@ -1540,6 +1706,29 @@ def get_token(particiones):
     return token
 
 
+def get_blackjack_embed(blackjack: Casino.Blackjack, show_dealer_hand=False):
+
+    game_embed = discord.Embed(title=f"Partida de blackjack de {blackjack.player.user.name}")
+
+    game_embed.colour = discord.Colour.blue()
+
+    game_embed.set_author(name=f"{blackjack.player.user.display_name} ha apostado {blackjack.player.bet} PC",
+                          icon_url=blackjack.player.user.avatar_url)
+
+    if show_dealer_hand:
+        game_embed.add_field(name=f"Dealer [{blackjack.get_dealer_value()}]",
+                             value=f"[ {' ] [ '.join([card.denomination for card in blackjack.dealer_hand])} ]")
+
+    else:
+        game_embed.add_field(name=f"Dealer [?]",
+                             value=f"[ {blackjack.dealer_hand[0].denomination} ] [ ? ]")
+
+    game_embed.add_field(name=f"{blackjack.player.user.name} [{blackjack.player.get_numeric_value()}]",
+                         value=f"[ {' ] [ '.join([card.denomination for card in blackjack.player.hand])} ]")
+
+    return game_embed
+
+
 async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.TextChannel) -> bool:
     if 'pene+' in item.effect:
         increase_size = int(item.effect[-1])
@@ -1553,7 +1742,9 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
             anuncio = discord.Embed(title="Felicidades! Tu tamaño de pene ha aumentado!",
                                     description=f"{current_size} :arrow_right: {current_size + increase_size}")
 
-            await channel.send(embed=anuncio)
+            user = await client.fetch_user(uuid)
+
+            await channel.send(f"{user.mention} ha usado {item.name}", embed=anuncio)
 
             # Retorna falso porque ya no debemos esperar un objetivo
             return False
@@ -1585,7 +1776,7 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
                                 description=f"Pajas de {user.mention}: {pajas_actuales} :arrow_right: "
                                             f"{pajas_actuales + cant_pajas}")
 
-        await channel.send(embed=anuncio)
+        await channel.send(f"{user.mention} ha usado {item.name}", embed=anuncio)
 
         return False
 
@@ -1607,7 +1798,6 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
         else:
             new_tam = admin_tam - reduc
         for admin_uuid in admins:
-
             admin_user = await client.fetch_user(admin_uuid)
 
             database.set_pene(guid, admin_uuid, new_tam)
@@ -1615,7 +1805,8 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
             anuncio.add_field(name=f"{admin_tam} :arrow_right: {new_tam}",
                               value=f"Pene de {admin_user.mention}", inline=False)
 
-        await channel.send(embed=anuncio)
+        item_user = await client.fetch_user(uuid)
+        await channel.send(f"{item_user.mention} ha usado {item.name}", embed=anuncio)
 
         return False
 
@@ -1646,7 +1837,7 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
             database.set_pene(guid, target_uid, new_tam)
 
         user = await client.fetch_user(uuid)
-        await channel.send(f"{user.mention} redujo el tamaño de pene de todos! @everyone!", embed=anuncio)
+        await channel.send(f"{user.mention} ha usado {item.name} @everyone", embed=anuncio)
 
         return False
 
