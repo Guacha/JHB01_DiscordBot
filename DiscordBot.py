@@ -163,7 +163,7 @@ async def upd_cont_reset():
 @client.command(name="peneblackjack",
                 description='Comando para jugar blackjack',
                 brief='Juega blackjack en el PeneCasino™!',
-                aliases=['Peneblackjack', 'pbj', 'PBJ', 'PENEBLACKJACK', 'PeneBlackJack'],
+                aliases=['Peneblackjack', 'pbj', 'PBJ', 'PENEBLACKJACK', 'PeneBlackJack', 'penebj', 'Penebj'],
                 usage='/usaritem',
                 pass_context=True)
 async def blackjack(ctx):

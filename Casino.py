@@ -151,6 +151,9 @@ class Blackjack:
                 if player_num_hand > dealer_value:
                     return True, 1.5
 
+                elif player_num_hand == dealer_value:
+                    return True, 1
+
                 else:
                     return False, 0
 
