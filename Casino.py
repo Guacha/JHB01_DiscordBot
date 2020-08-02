@@ -136,12 +136,12 @@ class Blackjack:
 
         # Si el jugador tiene 5 cartas y no se ha pasado del 21
         if self.player.get_numeric_value() < 21 and len(self.player.hand) == 5:
-            return True, 8
+            return True, 4
 
         if dealer_value > 21:
             # All players under 21 win
             if self.player.get_numeric_value() <= 21:
-                return True, 4
+                return True, 2.5
 
         else:
             # All players closer to 21 than the dealer win
@@ -156,6 +156,8 @@ class Blackjack:
 
                 else:
                     return False, 0
+
+            return True, 1
 
     def get_dealer_hit(self) -> bool:
 
