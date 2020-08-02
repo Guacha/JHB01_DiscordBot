@@ -1733,7 +1733,7 @@ def get_blackjack_embed(blackjack: Casino.Blackjack, show_dealer_hand=False):
 
 async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.TextChannel) -> bool:
     if 'pene+' in item.effect:
-        increase_size = int(item.effect[-1])
+        increase_size = int(item.effect.split('+')[-1])
 
         current_size = database.get_pene(guid, uuid)
 
