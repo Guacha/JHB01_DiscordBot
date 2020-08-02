@@ -1642,7 +1642,7 @@ async def on_message(message: discord.Message):
 
                     database.consume_pc(guid, target.id, stolen_pc)
 
-                    embed = discord.Embed(title="Has robado Penecréditos!")
+                    embed = discord.Embed(title=f"Has robado {stolen_pc} PeneCréditos™!")
                     embed.add_field(name=f"PC de {target.display_name}",
                                     value=f"{current_target_pc} :arrow_right: {current_target_pc - stolen_pc}")
 
@@ -1659,6 +1659,8 @@ async def on_message(message: discord.Message):
                     await message.channel.send(f"{message.author.mention} ha usado {item.name} en "
                                                f"{target.mention}!",
                                                embed=embed)
+
+                    del target_selection[message.author.id]
 
 
 def get_player_embed(stats: dict, pic: str):
