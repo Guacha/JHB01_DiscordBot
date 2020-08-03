@@ -1514,7 +1514,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
 
                         game_embed.set_footer(text="Decide qué harás ahora!")
 
-                        discord.Message = await msg.edit(embed=game_embed)
+                        await msg.edit(embed=game_embed)
 
                         await msg.add_reaction('✅')
                         await msg.add_reaction('🛑')
@@ -1673,7 +1673,7 @@ async def on_message(message: discord.Message):
                         database.give_penecreditos(guid, message.author.id, stolen_pc//2)
 
                         embed.add_field(name=f"PC de {message.author.display_name}",
-                                        value=f"{current_target_pc} :arrow_right: {current_user_pc + stolen_pc}")
+                                        value=f"{current_user_pc} :arrow_right: {current_user_pc + (stolen_pc//2)}")
 
                     else:
                         embed.description = "Al ladrón le valió verga el contrato y se llevó todos los PC que robó"
