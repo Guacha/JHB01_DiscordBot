@@ -133,15 +133,15 @@ async def upd_cont_reset():
             for admin in database.get_admins(guild.id):
                 database.give_penecreditos(393917904506191872, admin, 120)
                 user = await client.fetch_user(admin)
-                ganancias.add_field(name="Ganador por ser admin! (+150 PC)", value=user.mention, inline=False)
+                ganancias.add_field(name="Ganador por ser admin! (+120 PC)", value=user.mention, inline=False)
 
             # Otorgamos PeneCréditos a los más pajilleros
             ganadores_paja = database.get_all_pajas(guild.id)
 
             for pajero in ganadores_paja:
-                database.give_penecreditos(guild.id, pajero, int(3 * ganadores_paja[pajero]))
+                database.give_penecreditos(guild.id, pajero, int(2.5 * ganadores_paja[pajero]))
                 user = await client.fetch_user(pajero)
-                ganancias.add_field(name=f"Ganador por pajillero (+{int(3 * ganadores_paja[pajero])}PC)",
+                ganancias.add_field(name=f"Ganador por pajillero (+{int(2.5 * ganadores_paja[pajero])}PC)",
                                     value=user.mention,
                                     inline=False)
 
