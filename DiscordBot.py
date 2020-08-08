@@ -56,6 +56,7 @@ upgrading_farm = {}
 def eliminar_penes(guild_id):
     database.reset_all(guild_id)
 
+
 """@tasks.loop(minutes=10)
 async def cont_stocks():
     Función para administrar el temporizador del mercadod e acciones, esta función se asegura que cada
@@ -69,6 +70,7 @@ async def cont_stocks():
             stock_market.advance_rng(guild.id)
 """
 
+
 @tasks.loop(hours=1)
 async def farm_rewards():
     for guild in client.guilds:
@@ -79,7 +81,7 @@ async def farm_rewards():
             points = farm['points']
             modifier = farm['upgrades']['Mejora de PeneIngresos']
 
-            database.give_penecreditos(guild.id, uuid, int(points*(modifier/4)))
+            database.give_penecreditos(guild.id, uuid, int(points * (modifier / 4)))
 
 
 @tasks.loop(minutes=5)
@@ -199,6 +201,31 @@ async def upd_cont_reset():
                         break
 
 
+@commands.cooldown(1, 7200, commands.BucketType.user)
+@client.command(name="penehelp",
+                usage='/penehelp',
+                description='Comando para suplicar a PeneBelcebú por ayuda',
+                brief='Pídele ayuda a PeneBelcebú!',
+                aliases=['ph', 'PH', 'peneh', 'Peneh'],
+                pass_context=True)
+async def penehelp(ctx):
+
+    usr_pc = database.get_penecreditos(ctx.guild.id, ctx.author.id)
+
+    if usr_pc == 0:
+
+        if random.random() > 0.5:
+            database.give_penecreditos(ctx.guild.id, ctx.author.id, random.randint(1, 10))
+            await ctx.send("Felicidades, belcebú ha escuchado tus gritos de auxilio!")
+
+        else:
+            await ctx.send("Tus llamados de auxilio no han sido lo suficientemente fuertes! "
+                           "PeneBelcebú no escucha a los débiles")
+
+    else:
+        await ctx.send("Aquí solo damos dinero a los que están en verdadera necesidad")
+
+
 @commands.cooldown(1, 120, commands.BucketType.user)
 @client.command(name="penebusqueda",
                 usage='/penebúsqueda',
@@ -207,7 +234,6 @@ async def upd_cont_reset():
                 aliases=['pb', 'PB', 'peneb', 'Peneb'],
                 pass_context=True)
 async def penebusqueda(ctx):
-
     if database.get_penecreditos(ctx.guild.id, ctx.author.id) >= 1:
         database.consume_pc(ctx.guild.id, ctx.author.id, 1)
 
@@ -235,7 +261,6 @@ async def penebusqueda(ctx):
                 aliases=['pg', 'pichagorda', 'Pg', 'PG', 'peneg', 'Peneg'],
                 pass_context=True)
 async def penegranja(ctx, opt: str = 'ver'):
-
     print('---------------------------------------------------------------------')
     print("Comando de Penegranja")
     async with ctx.typing():
@@ -262,7 +287,7 @@ async def penegranja(ctx, opt: str = 'ver'):
                 for animal in animals:
                     string += f"{farm_module.get_emoji(rarity, animal)}" \
                               f"{''.join([superscript[num] for num in str(animals[animal])])}"
-                    string += f"{''.join([' ' for _ in range(4-len(str(animals[animal])))])}"
+                    string += f"{''.join([' ' for _ in range(4 - len(str(animals[animal])))])}"
 
                 for _ in range(farm_module.get_species_amount(rarity) - len(animals)):
                     string += ':question:⁰⁰'
@@ -271,14 +296,14 @@ async def penegranja(ctx, opt: str = 'ver'):
                 farm_embed.add_field(name=string, value='\u200b', inline=False)
 
             farm_embed.add_field(name=f"Puntos de Granja: {granja['points']}",
-                                 value=f"Genera {granja['points']*(granja['upgrades']['Mejora de PeneIngresos']/4)} PC/h")
+                                 value=f"Genera {granja['points'] * (granja['upgrades']['Mejora de PeneIngresos'] / 4)} PC/h")
 
             farm_embed.add_field(name="Mejoras:", value="\u200b", inline=False)
 
             for upgrade, lvl in granja['upgrades'].items():
                 lvl_string = ''
                 for x in range(5):
-                    if x+1 > lvl:
+                    if x + 1 > lvl:
                         lvl_string += ':white_small_square: '
 
                     else:
@@ -294,7 +319,7 @@ async def penegranja(ctx, opt: str = 'ver'):
             for upgrade, lvl in granja['upgrades'].items():
                 lvl_string = ''
                 for x in range(5):
-                    if x+1 > lvl:
+                    if x + 1 > lvl:
                         lvl_string += ':white_small_square: '
 
                     else:
@@ -306,7 +331,8 @@ async def penegranja(ctx, opt: str = 'ver'):
 
             for upgrade, lvl in granja['upgrades'].items():
                 if lvl < 5:
-                    farm_embed.add_field(name=f"{farm_module.upgrades[upgrade]}: Mejorar {upgrade}", value=f"Costo: {pow(10, lvl)} PC",
+                    farm_embed.add_field(name=f"{farm_module.upgrades[upgrade]}: Mejorar {upgrade}",
+                                         value=f"Costo: {pow(10, lvl)} PC",
                                          inline=False)
                     emojis.append(True)
 
@@ -329,6 +355,8 @@ async def penegranja(ctx, opt: str = 'ver'):
 """@client.command(name="penemercado",
                 usage='/penemercado {comprar|vender|ver} {Symbolo de Accion} {cantidad}',
                 pass_context=True)"""
+
+
 async def penemercado(ctx: commands.Context, action='ver', stock=None, amount=None):
     valid_actions = ['ver', 'comprar', 'vender', 'watch', 'buy', 'sell', 'w', 'b', 's']
 
@@ -1515,6 +1543,12 @@ async def na_error(ctx, error):
         print('---------------------------------------------------------------------')
 
 
+@penehelp.error
+async def penehelp_error(ctx: discord.ext.commands.Context, error):
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(f"Has pedido demasiado recientemente a belcebú, espera e intenta nuevamente!")
+
+
 @add_paja.error
 async def paja_error(ctx: discord.ext.commands.Context, error):
     if isinstance(error, commands.CommandOnCooldown):
@@ -1823,7 +1857,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
                             farm_module.upgrade_farm(msg.guild.id, user.id, lvl, 'Resistencia al Fuego')
                             database.consume_pc(reaction.message.guild.id, user.id, int(pow(10, lvl)))
                             await reaction.message.channel.send("Has mejorado tu granja con éxito!")
-
+                            await reaction.message.delete()
 
                         else:
                             await reaction.remove(user)
@@ -1845,6 +1879,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
                             farm_module.upgrade_farm(msg.guild.id, user.id, lvl, 'Mejora de Exploración')
                             database.consume_pc(reaction.message.guild.id, user.id, int(pow(10, lvl)))
                             await reaction.message.channel.send("Has mejorado tu granja con éxito!")
+                            await reaction.message.delete()
 
                         else:
                             await reaction.remove(user)
@@ -1855,6 +1890,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
                             farm_module.upgrade_farm(msg.guild.id, user.id, lvl, 'Resistencia a Inundaciones')
                             database.consume_pc(reaction.message.guild.id, user.id, int(pow(10, lvl)))
                             await reaction.message.channel.send("Has mejorado tu granja con éxito!")
+                            await reaction.message.delete()
 
                         else:
                             await reaction.remove(user)
@@ -1865,6 +1901,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
                             farm_module.upgrade_farm(msg.guild.id, user.id, lvl, 'Bunker Nuclear')
                             database.consume_pc(reaction.message.guild.id, user.id, int(pow(10, lvl)))
                             await reaction.message.channel.send("Has mejorado tu granja con éxito!")
+                            await reaction.message.delete()
 
                         else:
                             await reaction.remove(user)
