@@ -1534,7 +1534,8 @@ async def paja_error(ctx: discord.ext.commands.Context, error):
             pajas = database.get_pajas(ctx.guild.id, ctx.message.author.id)
             if size > 0:
                 database.set_pene(ctx.guild.id, ctx.message.author.id, size - 1)
-                database.set_pajas(ctx.guild.id, ctx.message.author.id, pajas - 5)
+
+            database.set_pajas(ctx.guild.id, ctx.message.author.id, pajas - 5)
 
         elif ansiados.get(ctx.message.author.id) > 2:
             client.get_command('paja').reset_cooldown(ctx)
