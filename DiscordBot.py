@@ -1549,6 +1549,12 @@ async def penehelp_error(ctx: discord.ext.commands.Context, error):
         await ctx.send(f"Has pedido demasiado recientemente a belcebú, espera e intenta nuevamente!")
 
 
+@penebusqueda.error
+async def penebusqueda_error(ctx: discord.ext.commands.Context, error):
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(f"Tu pene está muy cansado aún, inténtalo más tarde!")
+
+
 @add_paja.error
 async def paja_error(ctx: discord.ext.commands.Context, error):
     if isinstance(error, commands.CommandOnCooldown):
