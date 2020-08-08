@@ -13,7 +13,7 @@ from FireHandler import Database
 from discord.ext.commands import Bot
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
-from StockMarket import StockMarket
+#from StockMarket import StockMarket
 from Farm import Farm
 
 load_dotenv()
