@@ -199,6 +199,7 @@ async def upd_cont_reset():
                         break
 
 
+@commands.cooldown()
 @client.command(name="penebusqueda",
                 usage='/penebúsqueda',
                 description='Comando para explorar el mundo y encontrar animales para la PeneGranja™',
@@ -235,9 +236,12 @@ async def penebusqueda(ctx):
                 pass_context=True)
 async def penegranja(ctx, opt: str = 'ver'):
 
+    print('---------------------------------------------------------------------')
+    print("Comando de Penegranja")
     async with ctx.typing():
 
         granja = farm_module.get_farm(ctx.guild.id, ctx.author.id)
+
         if opt.lower() == 'ver' or opt.lower() == 'v':
             farm_embed = discord.Embed(title=f':man_farmer: Granja de {ctx.author.name}')
             superscript = {
@@ -1361,7 +1365,7 @@ async def get_pajas(context):
     await context.channel.send(f'El servidor en conjunto lleva un gran total de {total} pajas')
 
 
-@commands.cooldown(1, 20, commands.BucketType.user)  # Fue necesario implementar un cooldown (Gracias Miguel)
+@commands.cooldown(1, 120, commands.BucketType.user)  # Fue necesario implementar un cooldown (Gracias Miguel)
 @client.command(name='paja',
                 description='Comando que añade una paja a tu cuenta de pajas en el servidor',
                 brief='El bot te cuenta las pajas!',
@@ -1522,12 +1526,15 @@ async def paja_error(ctx: discord.ext.commands.Context, error):
             await ctx.channel.send(content='Por marica, mereces un castigo',
                                    embed=discord.Embed(title='ANUNCIO DE TAMAÑO DE PENE',
                                                        description=f'{ctx.message.author.mention}: El tamaño de tu '
-                                                                   f'pene ha sido reducido en 1 cm'
+                                                                   f'pene ha sido reducido en 1 cm y tus pajas han sido '
+                                                                   f'reducidas en 5'
                                                        )
                                    )
             size = database.get_pene(ctx.guild.id, ctx.message.author.id)
+            pajas = database.get_pajas(ctx.guild.id, ctx.message.author.id)
             if size > 0:
                 database.set_pene(ctx.guild.id, ctx.message.author.id, size - 1)
+                database.set_pajas(ctx.guild.id, ctx.message.author.id, pajas - 5)
 
         elif ansiados.get(ctx.message.author.id) > 2:
             client.get_command('paja').reset_cooldown(ctx)

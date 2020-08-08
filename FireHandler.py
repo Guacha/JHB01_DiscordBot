@@ -408,6 +408,13 @@ class Database:
     def upgrade_farm(self, guid, uuid, lvl, upgrade):
         self.__db.child(guid).child('user-stats').child(uuid).child('farm').child('upgrades').update({upgrade: lvl + 1})
 
+    def set_pajas(self, guid, uuid, pajas):
+        if pajas > 0:
+            self.__db.child(guid).child('user-stats').child(uuid).update({'pajas': pajas})
+
+        else:
+            self.__db.child(guid).child('user-stats').child(uuid).update({'pajas': 0})
+
 
 if __name__ == '__main__':
     pass
