@@ -13,7 +13,7 @@ from FireHandler import Database
 from discord.ext.commands import Bot
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
-#from StockMarket import StockMarket
+# from StockMarket import StockMarket
 from Farm import Farm
 
 load_dotenv()
@@ -200,7 +200,10 @@ async def upd_cont_reset():
 
 
 @client.command(name="penebusqueda",
-                usage='/penebúsqueda {ver|mejorar}',
+                usage='/penebúsqueda',
+                description='Comando para explorar el mundo y encontrar animales para la PeneGranja™',
+                brief='Añade animales a tu PeneGranja™!',
+                aliases=['pb', 'PB', 'peneb', 'Peneb'],
                 pass_context=True)
 async def penebusqueda(ctx):
 
@@ -225,7 +228,10 @@ async def penebusqueda(ctx):
 
 
 @client.command(name="penegranja",
-                usage='/penegranja {ver|mejorar}',
+                usage='/penegranja {ver(v)|mejorar(m)}',
+                description='Comando para explorar tu PeneGranja™',
+                brief='Revisa o mejora tu PeneGranja™!',
+                aliases=['pg', 'pichagorda', 'Pg', 'PG', 'peneg', 'Peneg'],
                 pass_context=True)
 async def penegranja(ctx, opt: str = 'ver'):
 
@@ -316,9 +322,9 @@ async def penegranja(ctx, opt: str = 'ver'):
             upgrading_farm[msg.id] = ctx.author.id
 
 
-@client.command(name="penemercado",
+"""@client.command(name="penemercado",
                 usage='/penemercado {comprar|vender|ver} {Symbolo de Accion} {cantidad}',
-                pass_context=True)
+                pass_context=True)"""
 async def penemercado(ctx: commands.Context, action='ver', stock=None, amount=None):
     valid_actions = ['ver', 'comprar', 'vender', 'watch', 'buy', 'sell', 'w', 'b', 's']
 
