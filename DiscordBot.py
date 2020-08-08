@@ -69,7 +69,7 @@ async def cont_stocks():
             stock_market.advance_rng(guild.id)
 """
 
-@tasks.loop(seconds=1)
+@tasks.loop(hours=1)
 async def farm_rewards():
     for guild in client.guilds:
         guild_users = database.get_all_users_uuid(guild.id)
