@@ -1,6 +1,6 @@
 import os
 import random
-from itertools import accumulate
+from math import pow
 
 import discord
 import math
@@ -13,6 +13,8 @@ from FireHandler import Database
 from discord.ext.commands import Bot
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
+from StockMarket import StockMarket
+from Farm import Farm
 
 load_dotenv()
 
@@ -30,6 +32,14 @@ print("Inicializando módulo: Penetienda...")
 tienda = Economia.Tienda()
 print("Módulo: Penetienda Inicializado con éxito")
 print('---------------------------------------------------------------------')
+print('---------------------------------------------------------------------')
+print("Inicializando módulo: PeneAcciones...")
+# stock_market = StockMarket(database)
+print('---------------------------------------------------------------------')
+print('---------------------------------------------------------------------')
+farm_module = Farm(database)
+print('---------------------------------------------------------------------')
+print('---------------------------------------------------------------------')
 
 ansiados = {}
 
@@ -39,10 +49,37 @@ confirmation = {}
 target_selection = {}
 betting = {}
 blackjack_games = {}
+buying_stock = {}
+upgrading_farm = {}
 
 
 def eliminar_penes(guild_id):
     database.reset_all(guild_id)
+
+"""@tasks.loop(minutes=10)
+async def cont_stocks():
+    Función para administrar el temporizador del mercadod e acciones, esta función se asegura que cada
+    media hora se hace una actualización de los datos
+
+    for guild in client.guilds:
+
+        timer = database.countdown_stock_timer(guild.id)
+
+        if timer == 0:
+            stock_market.advance_rng(guild.id)
+"""
+
+@tasks.loop(seconds=1)
+async def farm_rewards():
+    for guild in client.guilds:
+        guild_users = database.get_all_users_uuid(guild.id)
+        for uuid in guild_users:
+            farm = farm_module.get_farm(guild.id, uuid)
+
+            points = farm['points']
+            modifier = farm['upgrades']['Mejora de PeneIngresos']
+
+            database.give_penecreditos(guild.id, uuid, int(points*(modifier/4)))
 
 
 @tasks.loop(minutes=5)
@@ -160,6 +197,155 @@ async def upd_cont_reset():
                         await channel.send("Los penes han sido eliminados @everyone", embed=ganancias)
 
                         break
+
+
+@client.command(name="penebusqueda",
+                usage='/penebúsqueda {ver|mejorar}',
+                pass_context=True)
+async def penebusqueda(ctx):
+
+    if database.get_penecreditos(ctx.guild.id, ctx.author.id) >= 1:
+        database.consume_pc(ctx.guild.id, ctx.author.id, 1)
+
+        hunt = farm_module.wild_hunt(ctx.guild.id, ctx.author.id)
+
+        anuncio = discord.Embed(title=f"{ctx.author.name} ha gastado 1 pc y ha salido a explorar!")
+
+        found_animal = random.choice(list(hunt[1].keys()))
+
+        farm_module.grant_animal(ctx.guild.id, ctx.author.id, hunt[0], found_animal, 1)
+
+        anuncio.add_field(name=f"{ctx.author.name} ha encontrado un animal de clase {farm_module.rarities[hunt[0]]}",
+                          value=f"Animal encontrado: {farm_module.get_emoji(hunt[0], found_animal)}")
+
+        await ctx.send(embed=anuncio)
+
+    else:
+        await ctx.send(f"No tienes suficientes Penecréditos para salir a explorar {ctx.author.mention}!")
+
+
+@client.command(name="penegranja",
+                usage='/penegranja {ver|mejorar}',
+                pass_context=True)
+async def penegranja(ctx, opt: str = 'ver'):
+
+    async with ctx.typing():
+
+        granja = farm_module.get_farm(ctx.guild.id, ctx.author.id)
+        if opt.lower() == 'ver' or opt.lower() == 'v':
+            farm_embed = discord.Embed(title=f':man_farmer: Granja de {ctx.author.name}')
+            superscript = {
+                '1': '¹',
+                '2': '²',
+                '3': '³',
+                '4': '⁴',
+                '5': '⁵',
+                '6': '⁶',
+                '7': '⁷',
+                '8': '⁸',
+                '9': '⁹',
+                '0': '⁰'
+            }
+            for rarity, animals in granja['animals'].items():
+
+                string = f"{farm_module.rarities[rarity]}: "
+                for animal in animals:
+                    string += f"{farm_module.get_emoji(rarity, animal)}" \
+                              f"{''.join([superscript[num] for num in str(animals[animal])])}"
+                    string += f"{''.join([' ' for _ in range(4-len(str(animals[animal])))])}"
+
+                for _ in range(farm_module.get_species_amount(rarity) - len(animals)):
+                    string += ':question:⁰⁰'
+                    string += "  "
+
+                farm_embed.add_field(name=string, value='\u200b', inline=False)
+
+            farm_embed.add_field(name=f"Puntos de Granja: {granja['points']}",
+                                 value=f"Genera {granja['points']*(granja['upgrades']['Mejora de PeneIngresos']/4)} PC/h")
+
+            farm_embed.add_field(name="Mejoras:", value="\u200b", inline=False)
+
+            for upgrade, lvl in granja['upgrades'].items():
+                lvl_string = ''
+                for x in range(5):
+                    if x+1 > lvl:
+                        lvl_string += ':white_small_square: '
+
+                    else:
+                        lvl_string += f'{farm_module.upgrades[upgrade]} '
+
+                farm_embed.add_field(name=upgrade, value=lvl_string, inline=False)
+
+            await ctx.send(embed=farm_embed)
+
+        elif opt.lower() == 'mejorar' or opt.lower() == 'm':
+            farm_embed = discord.Embed(title=f':man_farmer: Granja de {ctx.author.name}')
+
+            for upgrade, lvl in granja['upgrades'].items():
+                lvl_string = ''
+                for x in range(5):
+                    if x+1 > lvl:
+                        lvl_string += ':white_small_square: '
+
+                    else:
+                        lvl_string += f'{farm_module.upgrades[upgrade]} '
+
+                farm_embed.add_field(name=f"{upgrade}", value=lvl_string, inline=False)
+
+            emojis = []
+
+            for upgrade, lvl in granja['upgrades'].items():
+                if lvl < 5:
+                    farm_embed.add_field(name=f"{farm_module.upgrades[upgrade]}: Mejorar {upgrade}", value=f"Costo: {pow(10, lvl)} PC",
+                                         inline=False)
+                    emojis.append(True)
+
+                else:
+                    emojis.append(True)
+
+            msg = await ctx.send(embed=farm_embed)
+
+            reactions = ["🧯", "💰", "🌱", "🌊", "☢️"]
+
+            for x in range(len(reactions)):
+                if emojis[x]:
+                    await msg.add_reaction(reactions[x])
+
+            await msg.add_reaction('❌')
+
+            upgrading_farm[msg.id] = ctx.author.id
+
+
+@client.command(name="penemercado",
+                usage='/penemercado {comprar|vender|ver} {Symbolo de Accion} {cantidad}',
+                pass_context=True)
+async def penemercado(ctx: commands.Context, action='ver', stock=None, amount=None):
+    valid_actions = ['ver', 'comprar', 'vender', 'watch', 'buy', 'sell', 'w', 'b', 's']
+
+    query_embed = discord.Embed()
+
+    async with ctx.typing():
+        if action.lower() in valid_actions:
+            if action.lower() == 'ver' or action.lower() == 'w':
+
+                if stock is None:
+                    query_embed.title = "Aquí están todas las acciones del mercado!"
+                    query_embed.description = "Tiempo para cambio de precios: " \
+                                              f"{stock_market.get_stock_timer(ctx.guild.id)} minutos"
+
+                    for stock in stock_market.get_available_stocks(ctx.guild.id):
+
+                        stock_info = stock_market.get_stock_info(ctx.guild.id, stock)
+
+                        if stock_info['last change'] < 0:
+                            query_embed.add_field(name=f"{stock_info['name']}({stock})",
+                                                  value=f"📉 {stock_info['last change']}%", inline=False)
+
+                        else:
+                            query_embed.add_field(name=f"{stock_info['name']}({stock})",
+                                                  value=f"📈 {stock_info['last change']}", inline=False)
+
+                    await ctx.send(embed=query_embed)
 
 
 @client.command(name="peneblackjack",
@@ -1367,8 +1553,10 @@ async def on_ready():
     print(client.user.id)  # Debugging
     print('---------------------------------------------------------------------')  # debugging
 
-    # Iniciar contador de reseteo
+    # Iniciar contador de reseteo y de stocks
     upd_cont_reset.start()
+    farm_rewards.start()
+    # cont_stocks.start()
 
 
 @client.event
@@ -1605,6 +1793,76 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
                         await msg.edit(embed=game_embed)
                         del blackjack_games[user.id]
 
+        elif reaction.message.id in upgrading_farm:
+            if user.id == upgrading_farm[reaction.message.id]:
+                msg: discord.Message = reaction.message
+                user_pc = database.get_penecreditos(msg.guild.id, user.id)
+                user_farm = farm_module.get_farm(msg.guild.id, user.id)
+
+                upg_emojis = ["🧯", "💰", "🌱", "🌊", "☢️"]
+
+                if reaction.emoji in upg_emojis:
+
+                    if reaction.emoji == "🧯":
+                        lvl = user_farm['upgrades']['Resistencia al Fuego']
+                        if user_pc >= pow(10, lvl):
+                            farm_module.upgrade_farm(msg.guild.id, user.id, lvl, 'Resistencia al Fuego')
+                            database.consume_pc(reaction.message.guild.id, user.id, int(pow(10, lvl)))
+                            await reaction.message.channel.send("Has mejorado tu granja con éxito!")
+
+
+                        else:
+                            await reaction.remove(user)
+
+                    if reaction.emoji == "💰":
+                        lvl = user_farm['upgrades']['Mejora de PeneIngresos']
+                        if user_pc >= pow(10, lvl):
+                            farm_module.upgrade_farm(msg.guild.id, user.id, lvl, 'Mejora de PeneIngresos')
+                            database.consume_pc(reaction.message.guild.id, user.id, int(pow(10, lvl)))
+                            await reaction.message.channel.send("Has mejorado tu granja con éxito!")
+                            await reaction.message.delete()
+
+                        else:
+                            await reaction.remove(user)
+
+                    if reaction.emoji == "🌱":
+                        lvl = user_farm['upgrades']['Mejora de Exploración']
+                        if user_pc >= pow(10, lvl):
+                            farm_module.upgrade_farm(msg.guild.id, user.id, lvl, 'Mejora de Exploración')
+                            database.consume_pc(reaction.message.guild.id, user.id, int(pow(10, lvl)))
+                            await reaction.message.channel.send("Has mejorado tu granja con éxito!")
+
+                        else:
+                            await reaction.remove(user)
+
+                    if reaction.emoji == "🌊":
+                        lvl = user_farm['upgrades']['Resistencia a Inundaciones']
+                        if user_pc >= pow(10, lvl):
+                            farm_module.upgrade_farm(msg.guild.id, user.id, lvl, 'Resistencia a Inundaciones')
+                            database.consume_pc(reaction.message.guild.id, user.id, int(pow(10, lvl)))
+                            await reaction.message.channel.send("Has mejorado tu granja con éxito!")
+
+                        else:
+                            await reaction.remove(user)
+
+                    if reaction.emoji == "☢️":
+                        lvl = user_farm['upgrades']['Bunker Nuclear']
+                        if user_pc >= pow(10, lvl):
+                            farm_module.upgrade_farm(msg.guild.id, user.id, lvl, 'Bunker Nuclear')
+                            database.consume_pc(reaction.message.guild.id, user.id, int(pow(10, lvl)))
+                            await reaction.message.channel.send("Has mejorado tu granja con éxito!")
+
+                        else:
+                            await reaction.remove(user)
+
+                    del upgrading_farm[reaction.message.id]
+
+                elif reaction.emoji == '❌':
+
+                    del upgrading_farm[reaction.message.id]
+                    await reaction.message.channel.send("Has cancelado la mejora")
+                    await reaction.message.delete()
+
 
 @client.event
 async def on_message(message: discord.Message):
@@ -1657,7 +1915,7 @@ async def on_message(message: discord.Message):
 
                     current_target_pc = database.get_penecreditos(guid, target.id)
 
-                    stolen_pc = int(current_target_pc*(steal_percentage/100))
+                    stolen_pc = int(current_target_pc * (steal_percentage / 100))
 
                     database.consume_pc(guid, target.id, stolen_pc)
 
@@ -1670,10 +1928,10 @@ async def on_message(message: discord.Message):
                         embed.description = "El ladrón ha sido fiel al contrato, recibes el 50% de lo que robó"
 
                         current_user_pc = database.get_penecreditos(guid, message.author.id)
-                        database.give_penecreditos(guid, message.author.id, stolen_pc//2)
+                        database.give_penecreditos(guid, message.author.id, stolen_pc // 2)
 
                         embed.add_field(name=f"PC de {message.author.display_name}",
-                                        value=f"{current_user_pc} :arrow_right: {current_user_pc + (stolen_pc//2)}")
+                                        value=f"{current_user_pc} :arrow_right: {current_user_pc + (stolen_pc // 2)}")
 
                     else:
                         embed.description = "Al ladrón le valió verga el contrato y se llevó todos los PC que robó"
@@ -1880,6 +2138,9 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
         anuncio = discord.Embed(title="Has reducido el tamaño de todos!")
 
         for target_uid in penes:
+
+            if target_uid == uuid:
+                continue
 
             user = await client.fetch_user(target_uid)
 
