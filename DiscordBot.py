@@ -1393,7 +1393,7 @@ async def get_pajas(context):
     await context.channel.send(f'El servidor en conjunto lleva un gran total de {total} pajas')
 
 
-@commands.cooldown(1, 120, commands.BucketType.user)  # Fue necesario implementar un cooldown (Gracias Miguel)
+@commands.cooldown(1, 900, commands.BucketType.user)  # Fue necesario implementar un cooldown (Gracias Miguel)
 @client.command(name='paja',
                 description='Comando que añade una paja a tu cuenta de pajas en el servidor',
                 brief='El bot te cuenta las pajas!',
