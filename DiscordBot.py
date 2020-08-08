@@ -199,7 +199,7 @@ async def upd_cont_reset():
                         break
 
 
-@commands.cooldown()
+@commands.cooldown(1, 120, commands.BucketType.user)
 @client.command(name="penebusqueda",
                 usage='/penebúsqueda',
                 description='Comando para explorar el mundo y encontrar animales para la PeneGranja™',
