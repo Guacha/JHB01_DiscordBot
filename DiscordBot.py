@@ -2196,24 +2196,23 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
 
         for target_uid in penes:
 
-            if target_uid == uuid:
-                continue
+            if target_uid != str(uuid):
 
-            user = await client.fetch_user(target_uid)
+                user = await client.fetch_user(target_uid)
 
-            curr_size = penes[target_uid]
+                curr_size = penes[target_uid]
 
-            if curr_size - reduc < 0:
-                new_tam = 0
+                if curr_size - reduc < 0:
+                    new_tam = 0
 
-            else:
-                new_tam = curr_size - reduc
+                else:
+                    new_tam = curr_size - reduc
 
-            anuncio.add_field(name=f"{curr_size} :arrow_right: {new_tam}",
-                              value=f"Pene de {user.mention}",
-                              inline=False)
+                anuncio.add_field(name=f"{curr_size} :arrow_right: {new_tam}",
+                                  value=f"Pene de {user.mention}",
+                                  inline=False)
 
-            database.set_pene(guid, target_uid, new_tam)
+                database.set_pene(guid, target_uid, new_tam)
 
         user = await client.fetch_user(uuid)
         await channel.send(f"{user.mention} ha usado {item.name} @everyone", embed=anuncio)
