@@ -122,7 +122,7 @@ class Farm:
 
         exp_upgrade = player_farm['upgrades']['Mejora de Exploración']
 
-        prob = (80, 50, 16*(exp_upgrade/4), 10*(exp_upgrade/4), 4*(exp_upgrade/4))
+        prob = (80, 60, 20*(exp_upgrade/4), 8*(exp_upgrade/4), 1*(exp_upgrade/4))
 
         opts = (
             ('common', self.common_species),
