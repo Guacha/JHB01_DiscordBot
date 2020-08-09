@@ -38,7 +38,7 @@ class Farm:
             'Pavo Real': ':peacock:',
             'Flamingo': ':flamingo:',
             'Cisne': ':swan:',
-            'Cocodrilo': ':cocodrile:'
+            'Cocodrilo': ':crocodile:'
         }
 
         self.mythical_species = {
