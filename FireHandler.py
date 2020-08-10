@@ -20,6 +20,7 @@ class Database:
 
         self.__firebase = pyrebase.initialize_app(config)
         self.__db = self.__firebase.database()
+        self.db = self.__db
 
     def get_pene(self, guid: int, uuid: int):
         """Obtiene el pene de un usuario en un servidor específico"""
@@ -306,7 +307,7 @@ class Database:
 
         self.add_price_to_stock_history(guid, stock, current_price)
 
-        new_price = current_price + (current_price * (stock_change/100))
+        new_price = current_price + (current_price * (stock_change / 100))
 
         self.__db.child(guid).child('stock market').child('stocks').child(stock).update({
             'value': new_price,
@@ -323,15 +324,15 @@ class Database:
 
         self.__db.child(guid).child('stock market').child('price history').child(stock) \
             .child(year).child(month).child(day).push({
-                'value': price
-            })
+            'value': price
+        })
 
     def countdown_stock_timer(self, guid):
 
         timer = self.__db.child(guid).child('stock market').child('time').get().val()
 
         if timer > 0:
-            self.__db.child(guid).child('stock market').update({'time': timer-1})
+            self.__db.child(guid).child('stock market').update({'time': timer - 1})
 
         else:
             self.__db.child(guid).child('stock market').update({'time': 29})
@@ -347,7 +348,7 @@ class Database:
         player_ref = self.__db.child(guid).child('user-stats').child(uuid)
 
         farm = player_ref.child('farm').get()
-        
+
         if farm.val() is not None:
             return farm.val()
         else:
@@ -376,7 +377,7 @@ class Database:
 
     def add_animal(self, guid, uuid, rarity, animal, amount=1):
 
-        animal_amount = self.__db.child(guid).child('user-stats').child(uuid).child('farm')\
+        animal_amount = self.__db.child(guid).child('user-stats').child(uuid).child('farm') \
             .child('animals').child(rarity).child(animal).get().val()
 
         if animal_amount is not None:
@@ -402,7 +403,7 @@ class Database:
 
         else:
             self.__db.child(guid).child('user-stats').child(uuid).child('farm').update({
-                'points': curr_points + (points/2)
+                'points': curr_points + (points / 2)
             })
 
     def upgrade_farm(self, guid, uuid, lvl, upgrade):
@@ -415,7 +416,116 @@ class Database:
         else:
             self.__db.child(guid).child('user-stats').child(uuid).update({'pajas': 0})
 
+    def get_chance(self, guid, uuid):
+        ch = self.__db.child(guid).child('user-stats').child(uuid).child('prob').get().val()
+
+        return ch if ch is not None else 0
+
+    def multiply_catastrophe_chance(self, guid, mult):
+        chance = self.__db.child(guid).child('server-stats').child('catastrophe chance').get().val()
+
+        if chance is not None:
+            self.__db.child(guid).child('server-stats').update({'catastrophe chance': chance * mult})
+
+        else:
+            self.__db.child(guid).child('server-stats').update({'catastrophe chance': 1 / 256})
+
+    def get_catastrophe_chance(self, guid):
+        chance = self.__db.child(guid).child('server-stats').child('catastrophe chance').get().val()
+
+        if chance is None:
+            self.reset_catastrophe_chance(guid)
+            return 1 / 512
+
+        else:
+            return chance
+
+    def reset_catastrophe_chance(self, guid):
+        self.__db.child(guid).child('server-stats').update({'catastrophe chance': 1 / 512})
+
+    def create_catastrophe(self, guid):
+
+        rarity_to_pts = {
+            'common': 1,
+            'uncommon': 2,
+            'rare': 4,
+            'epic': 16,
+            'mythical': 256
+        }
+
+        for user in self.__.db.child(guid).child('user-stats').get().each():
+
+            farm = self.__db.get_player_farm(guid, user.key())
+
+            resistance = farm['upgrades']['Resistencia a Inundaciones']
+
+            try:
+                points_deducted = 0
+                for rarity in farm['animals']:
+                    for animal in farm['animals'][rarity]:
+                        if random.random() <= 0.75 - (0.1 * resistance):
+                            self.__db.child(guid).child('user-stats').child(user.key()).child('farm').child('animals') \
+                                .child(rarity).child(animal).remove()
+                            print(animal, "Borrado")
+                            points_deducted += rarity_to_pts[rarity] + \
+                                               (rarity_to_pts[rarity] * (farm['animals'][rarity][animal] - 1) / 2)
+
+                self.give_farm_points(guid, user.key(), -points_deducted)
+            except KeyError:
+                pass
+
+            try:
+                for upgrade in farm['upgrades']:
+                    if random.random() <= 1 - (0.1 * resistance):
+                        self.__db.child(375866694465355776).child('user-stats').child(user.key()).child('farm'). \
+                            child('upgrades').update({upgrade: random.randint(0, farm['upgrades'][upgrade])})
+
+            except KeyError:
+                pass
+
+    def farm_attack(self, guid, target_uid, attack_type='fuego'):
+
+        target_farm = self.__db.get_player_farm(guid, target_uid)
+
+        rarity_to_pts = {
+            'common': 1,
+            'uncommon': 2,
+            'rare': 4,
+            'epic': 16,
+            'mythical': 256
+        }
+
+        if attack_type == 'fuego':
+
+            resistance = target_farm['upgrades']['Resistencia al Fuego']
+            base = 0.8
+            upgrade = 0.1
+
+        elif attack_type == 'nuclear':
+
+            resistance = target_farm['upgrades']['Bunker Nuclear']
+            base = 0.75
+            upgrade = 0.05
+
+        else:
+            resistance = 0
+            base = 1
+            upgrade = 0
+
+        try:
+            points_deducted = 0
+            for rarity in target_farm['animals']:
+                for animal in target_farm['animals'][rarity]:
+                    if random.random() <= base - (upgrade * resistance):
+                        self.__db.child(guid).child('user-stats').child(target_uid).child('farm').child('animals') \
+                            .child(rarity).child(animal).remove()
+                        points_deducted += rarity_to_pts[rarity] + \
+                                           (rarity_to_pts[rarity] * (target_farm['animals'][rarity][animal] - 1) / 2)
+
+            self.give_farm_points(guid, target_uid, -points_deducted)
+        except KeyError:
+            pass
+
 
 if __name__ == '__main__':
     pass
-

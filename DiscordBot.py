@@ -75,13 +75,21 @@ async def cont_stocks():
 async def farm_rewards():
     for guild in client.guilds:
         guild_users = database.get_all_users_uuid(guild.id)
+
+        catastrophe = random.random() <= database.get_catastrophe_chance(guild.id)
+
         for uuid in guild_users:
-            farm = farm_module.get_farm(guild.id, uuid)
 
-            points = farm['points']
-            modifier = farm['upgrades']['Mejora de PeneIngresos']
+            if catastrophe:
+                database.create_catastrophe(guild.id)
+                database.reset_catastrophe_chance(guild.id)
 
-            database.give_penecreditos(guild.id, uuid, int(points * (modifier / 4)))
+            else:
+                farm = farm_module.get_farm(guild.id, uuid)
+                points = farm['points']
+                modifier = farm['upgrades']['Mejora de PeneIngresos']
+
+                database.give_penecreditos(guild.id, uuid, int(points * (modifier / 4)))
 
 
 @tasks.loop(minutes=5)
@@ -222,8 +230,16 @@ async def penehelp(ctx):
             await ctx.send("Tus llamados de auxilio no han sido lo suficientemente fuertes! "
                            "PeneBelcebú no escucha a los débiles")
 
+            if random.random() >= 0.5:
+                database.multiply_catastrophe_chance(ctx.guild.id, 2)
+                await ctx.send("Han enojado a Belcebú")
+
     else:
         await ctx.send("Aquí solo damos dinero a los que están en verdadera necesidad")
+
+        if random.random >= 0.5:
+            database.multiply_catastrophe_chance(ctx.guild.id, 2)
+            await ctx.send("Han enojado a Belcebú")
 
 
 @commands.cooldown(1, 120, commands.BucketType.user)
@@ -1648,6 +1664,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
 
                         tienda.reset_display_items()
 
+
                     else:
                         await reaction.message.channel.send("No tienes PeneCréditos suficientes para comprar ese item!")
 
@@ -1999,6 +2016,12 @@ async def on_message(message: discord.Message):
 
                     del target_selection[message.author.id]
 
+                elif 'fuego' in item.effect:
+                    pass
+
+                elif 'nuclear' in item.effect:
+                    pass
+
 
 def get_player_embed(stats: dict, pic: str):
     # Crear el embed
@@ -2226,6 +2249,25 @@ async def use_item(uuid: int, guid: int, item: Economia.Item, channel: discord.T
         await channel.send(embed=inst)
 
         target_selection[uuid] = item
+
+    elif 'granja-' in item.effect:
+
+        effect = item.effect.split('-')[-1]
+
+        if effect != 'inundacion':
+
+            inst = discord.Embed(title="Envía un mensaje mencionando a la persona a la que quieres encogerle el pene",
+                                 description=f"Por ejemplo: {client.user.mention}")
+            await channel.send(embed=inst)
+
+            target_selection[uuid] = item
+
+            return True
+
+        else:
+            database.multiply_catastrophe_chance(guid, 2)
+
+            return False
 
 
 if __name__ == '__main__':
