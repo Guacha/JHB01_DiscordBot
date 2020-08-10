@@ -453,7 +453,7 @@ class Database:
             'mythical': 256
         }
 
-        for user in self.__.db.child(guid).child('user-stats').get().each():
+        for user in self.__db.child(guid).child('user-stats').get().each():
 
             farm = self.__db.get_player_farm(guid, user.key())
 
@@ -485,7 +485,7 @@ class Database:
 
     def farm_attack(self, guid, target_uid, attack_type='fuego'):
 
-        target_farm = self.__db.get_player_farm(guid, target_uid)
+        target_farm = self.get_player_farm(guid, target_uid)
 
         rarity_to_pts = {
             'common': 1,
@@ -512,6 +512,8 @@ class Database:
             base = 1
             upgrade = 0
 
+        res = {}
+
         try:
             points_deducted = 0
             for rarity in target_farm['animals']:
@@ -522,9 +524,13 @@ class Database:
                         points_deducted += rarity_to_pts[rarity] + \
                                            (rarity_to_pts[rarity] * (target_farm['animals'][rarity][animal] - 1) / 2)
 
+                        res[animal] = target_farm['animals'][rarity][animal]
+
             self.give_farm_points(guid, target_uid, -points_deducted)
         except KeyError:
             pass
+
+        return res
 
 
 if __name__ == '__main__':

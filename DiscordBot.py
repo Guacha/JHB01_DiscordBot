@@ -2017,10 +2017,28 @@ async def on_message(message: discord.Message):
                     del target_selection[message.author.id]
 
                 elif 'fuego' in item.effect:
-                    pass
+                    deaths = database.farm_attack(message.guild.id, target.id, 'fuego')
+
+                    embed = discord.Embed(title="Se ha lanzado un coctel molotov a una granja!",
+                                          description="Han muerto muchos de tus animales, aquí tienes los que murieron")
+
+                    for death in deaths:
+                        embed.add_field(name=death, value=deaths[death])
+
+                    await message.channel.send(f"{message.author.mention} ha lanzado una bomba nuclear a la granja de "
+                                               f"{target.mention}", embed=embed)
 
                 elif 'nuclear' in item.effect:
-                    pass
+                    deaths = database.farm_attack(message.guild.id, target.id, 'nuclear')
+
+                    embed = discord.Embed(title="Se ha lanzado una bomba nuclear a una granja!",
+                                          description="Han muerto muchos de tus animales, aquí tienes los que murieron")
+
+                    for death in deaths:
+                        embed.add_field(name=death, value=deaths[death])
+
+                    await message.channel.send(f"{message.author.mention} ha lanzado una bomba nuclear a la granja de "
+                                               f"{target.mention}", embed=embed)
 
 
 def get_player_embed(stats: dict, pic: str):
