@@ -498,7 +498,7 @@ class Database:
         if attack_type == 'fuego':
 
             resistance = target_farm['upgrades']['Resistencia al Fuego']
-            base = 0.8
+            base = 0.7
             upgrade = 0.1
 
         elif attack_type == 'nuclear':
