@@ -42,6 +42,9 @@ class Tienda:
             if random.random() <= (item.prob/100):
                 self.display_items.append(item)
 
+            if len(self.display_items) == 9:
+                break
+
     def item_from_string(self, item_name) -> Item:
 
         for item in self.__item_list:

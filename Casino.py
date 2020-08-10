@@ -2,11 +2,6 @@ import random
 from collections import deque
 from typing import List, Tuple
 
-
-class PeneLoteria:
-    pass
-
-
 class Card:
 
     def __init__(self, suit, denomination):
